@@ -3,6 +3,9 @@
 #include <Adafruit_TinyUSB.h>
 #include <bluefruit.h>
 
+// Firmware version (MAJOR.MINOR.PATCH)
+static const char* kFirmwareVersion = "1.0.1";
+
 // -----------------------------
 // BLE UUIDs (temporary)
 // -----------------------------
