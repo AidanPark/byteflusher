@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Byte Flusher (BLE → USB HID)</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="topHeader">
+        <h1>🤖 Byte Flusher ⌨️</h1>
+        <p class="muted">브라우저(Web Bluetooth)로 Flusher에 연결해 텍스트를 Flush합니다.</p>
+      </header>
+
+      <div class="layout">
+        <aside class="sidebar">
+          <section class="card">
+            <h2 class="sidebarTitle">장치</h2>
+            <fieldset id="deviceFieldset">
+              <div class="row">
+                <button id="btnConnect" class="primary">장치 연결</button>
+                <button id="btnDisconnect" disabled>연결 해제</button>
+              </div>
+            </fieldset>
+            <div class="status">
+              <div><span class="label">상태</span> <span id="statusText">연결 안 됨</span></div>
+              <div class="muted small" id="detailsText"></div>
+            </div>
+          </section>
+
+          <section class="card">
+            <fieldset id="settingsFieldset">
+              <h2 class="settingsTitle">전송설정</h2>
+              <div class="grid2">
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  청크 크기 (바이트)
+                  <input id="chunkSize" type="number" min="1" max="200" value="20" />
+                </label>
+                <p class="muted small" style="margin: -2px 0 0;">
+                  한 번에 BLE로 보내는 데이터 크기입니다. 너무 크면 실패율이 올라갈 수 있습니다.
+                </p>
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  청크 전송 간격 (ms)
+                  <input id="chunkDelay" type="number" min="0" max="200" value="30" />
+                </label>
+                <p class="muted small" style="margin: -2px 0 0;">
+                  청크를 보낸 뒤 다음 청크를 보내기 전 대기 시간입니다(전송 안정화용).
+                </p>
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  재시도 간격 (ms)
+                  <input id="retryDelay" type="number" min="0" max="5000" value="300" />
+                </label>
+                <p class="muted small" style="margin: -2px 0 0;">
+                  연결이 끊기거나 전송 실패 시, 재연결/재전송을 시도하기 전 대기 시간입니다.
+                </p>
+              </div>
+
+              <h2 class="settingsTitle" style="margin-top: 14px;">입력설정</h2>
+
+
+              <div class="grid2" style="margin-top: 12px;">
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  한/영 전환키
+                  <select id="toggleKey">
+                    <option value="rightAlt">오른쪽 Alt (Windows)</option>
+                    <option value="capsLock">Caps Lock (mac)</option>
+                    <option value="leftAlt">왼쪽 Alt</option>
+                    <option value="rightCtrl">오른쪽 Ctrl</option>
+                    <option value="leftCtrl">왼쪽 Ctrl</option>
+                    <option value="rightGui">오른쪽 GUI (Win/Cmd)</option>
+                    <option value="leftGui">왼쪽 GUI (Win/Cmd)</option>
+                  </select>
+                </label>
+
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  대체 문자열
+                  <input id="unsupportedReplacement" type="text" value="[?]" maxlength="16" />
+                </label>
+                <p class="muted small" style="margin: 9px 0 0;">
+                  키보드에 없는 문자는 이 문자열로 치환되어 입력됩니다.
+                </p>
+
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  라인 시작 공백/탭 무시
+                  <input id="ignoreLeadingWhitespace" type="checkbox" />
+                </label>
+                <p class="muted small" style="margin: 9px 0 0;">
+                  각 줄 맨 앞의 공백/탭은 전송하지 않습니다(IDE에 입력 후 포매팅으로 정렬할 때 유용).
+                </p>
+
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  키 입력 후 대기 (ms)
+                  <input id="typingDelayMs" type="number" min="0" max="1000" value="30" />
+                </label>                
+                <p class="muted small" style="margin: -2px 0 0;">
+                  각 키 입력(문자 1개) 후 대기 시간입니다. 너무 짧으면 키 입력이 누락되거나(특히 HID/IME) 글자가 깨질 수 있습니다.
+                </p>
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  한/영 전환 후 대기 (ms)
+                  <input id="modeSwitchDelayMs" type="number" min="0" max="3000" value="100" />
+                </label>
+                <p class="muted small" style="margin: -2px 0 0;">
+                  한/영 전환(IME 토글) 직후 안정화 대기입니다. 전환이 완료되기 전에 다음 키를 보내면 원래 모드로 입력될 수 있습니다.
+                </p>
+                <label class="inline" style="width: 100%; justify-content: space-between;">
+                  키 눌림 유지 (ms)
+                  <input id="keyPressDelayMs" type="number" min="0" max="300" value="10" />
+                </label>
+                <p class="muted small" style="margin: -2px 0 0;">
+                  키를 "누르고 있는 시간"입니다. 너무 짧으면 일부 환경에서 눌림이 인식되지 않을 수 있습니다.
+                </p>
+              </div>
+              <p class="muted small" style="margin: 9px 0 0;">
+                위 값들은 보드(USB HID)의 실제 타이핑 속도/안정성에 영향을 줍니다.
+              </p>
+
+              <div class="row" style="margin-top: 12px;">
+                <button id="btnApplyDeviceSettings" class="primary" disabled>장치설정 적용</button>
+                <button id="btnResetSettings">설정 초기화</button>
+              </div>
+            </fieldset>
+          </section>
+          
+          <section class="card">
+            <h2 class="sidebarTitle">참고</h2>
+            <ul class="muted small" style="margin: 0; padding-left: 18px;">
+              <li>Web Bluetooth는 Chrome/Edge에서만 동작합니다.</li>
+              <li>Target PC는 USB 키보드 장치를 허용해야 합니다.</li>
+              <li>시작(Flush) 전에 Target PC에서 입력될 위치에 커서를 미리 놓아주세요.</li>
+              <li>시작 전에 Target PC 입력기를 <b>영문 상태</b>로 맞춰주세요(한/영 자동 동기화는 보장할 수 없습니다).</li>
+              <li>BLE 전송은 길이 제한이 있어 기본적으로 분할 전송합니다.</li>
+            </ul>
+          </section>
+        </aside>
+
+        <section class="main">
+          <section class="card">
+            <label for="textInput" class="label">Flush Text</label>
+            <textarea id="textInput" rows="28" placeholder="여기에 입력한 텍스트가 Target PC로 타이핑됩니다."></textarea>
+
+            <div id="jobMetrics" class="jobMetrics" aria-live="polite">
+              <div class="jobLine">
+                <span class="jobKey">예상</span>
+                <span id="etaText" class="muted small">-</span>
+              </div>
+              <div class="jobLine">
+                <span class="jobKey">시작</span>
+                <span id="startTimeText" class="muted small">-</span>
+              </div>
+              <div class="jobLine">
+                <span class="jobKey">경과</span>
+                <span id="elapsedText" class="muted small">-</span>
+              </div>
+              <div class="jobLine">
+                <span class="jobKey">완료율</span>
+                <span id="progressText" class="muted small">-</span>
+              </div>
+              <div class="jobLine">
+                <span class="jobKey">종료</span>
+                <span id="endTimeText" class="muted small">-</span>
+              </div>
+              <div class="jobLine jobLineWide">
+                <span class="jobKey">기준</span>
+                <span id="estimateBasisText" class="muted small">-</span>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top: 10px;">
+              <button id="btnStart" class="primary" disabled>Start</button>
+              <button id="btnPause" disabled>Pause</button>
+              <button id="btnResume" disabled>Resume</button>
+              <button id="btnStop" class="danger" disabled>Stop</button>
+            </div>
+
+          </section>
+        </section>
+      </div>
+    </main>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

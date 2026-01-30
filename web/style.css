@@ -1,0 +1,263 @@
+:root {
+  --bg: #0b1020;
+  --card: #121a33;
+  --text: #e8ecff;
+  --muted: #a8b1d6;
+  --accent: #6aa3ff;
+  --border: rgba(255, 255, 255, 0.10);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  background: radial-gradient(1200px 600px at 20% 0%, rgba(106, 163, 255, 0.25), transparent 60%), var(--bg);
+  color: var(--text);
+}
+
+.container {
+  max-width: 1100px;
+  padding: 28px 16px 60px;
+  margin: 0 auto;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.sidebar {
+  position: sticky;
+  top: 16px;
+}
+
+.main {
+  min-width: 0;
+}
+
+/* 오른쪽 입력 영역(메인)의 최외곽 카드 바운더리는 제거한다. */
+.main > .card {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.topHeader {
+  margin-bottom: 14px;
+  padding: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.topHeader p {
+  margin: 0;
+}
+
+.sidebarTitle {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+
+.sidebarSubTitle {
+  margin: 6px 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.2px;
+}
+
+.settingsTitle {
+  margin: 6px 0 10px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: 0.2px;
+}
+
+.grid2 {
+  display: grid;
+  gap: 10px;
+}
+
+h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  letter-spacing: 0.2px;
+}
+
+.card {
+  margin-top: 14px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+#settingsFieldset:disabled {
+  opacity: 0.6;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+button {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button.primary {
+  background: rgba(106, 163, 255, 0.22);
+  border-color: rgba(106, 163, 255, 0.35);
+}
+
+button.danger {
+  background: rgba(255, 106, 106, 0.18);
+  border-color: rgba(255, 106, 106, 0.35);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+textarea {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.20);
+  color: var(--text);
+  resize: vertical;
+  outline: none;
+}
+
+/* 입력창은 화면 높이에 맞춰 더 넓게 쓸 수 있게 한다. */
+#textInput {
+  min-height: clamp(288px, 48vh, 656px);
+}
+
+textarea:focus {
+  border-color: rgba(106, 163, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(106, 163, 255, 0.12);
+}
+
+.jobMetrics {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.jobLine {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.jobLineWide {
+  grid-template-columns: 56px 1fr;
+}
+
+.jobKey {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.label {
+  font-weight: 600;
+}
+
+.inline {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255,255,255,0.03);
+}
+
+/* 사이드바 설정 영역은 카드 바운더리와 겹치지 않게 라벨 테두리를 제거한다. */
+.sidebar .inline {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 12px;
+}
+
+.inline input {
+  width: 72px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  color: var(--text);
+}
+
+.inline select {
+  width: 180px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.18);
+  color: var(--text);
+  color-scheme: dark;
+}
+
+/* 일부 환경(특히 Windows)에서 option 리스트가 밝게 떠 가독성이 떨어지는 문제를 완화 */
+.inline select option {
+  background-color: #0b1020;
+  color: #e8ecff;
+}
+
+.inline select option:checked {
+  background-color: rgba(106, 163, 255, 0.35);
+  color: #e8ecff;
+}
+
+.status {
+  margin-top: 12px;
+  display: grid;
+  gap: 6px;
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+}
