@@ -10,8 +10,6 @@
 
 ## 🖥️ Web UI 미리보기
 
-> 아래 이미지는 README/검색 노출용 “미리보기(Preview)”입니다. 원하면 실제 스크린샷/GIF로 교체해도 됩니다.
-
 [Text Flush UI](web/text.html)
 
 ![Byte Flusher Text Flush UI preview (Web Bluetooth BLE to USB HID keyboard automatic typing)](docs/ui_text_preview.png)
