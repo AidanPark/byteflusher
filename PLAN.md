@@ -1,6 +1,6 @@
-# BLE ↔ USB HID 입력 장치
+# BLE ↔ USB HID 입력 장치 (ByteFlusher)
 
-펌웨어 버전: 1.0.0
+펌웨어 버전은 [src/main.cpp](src/main.cpp) 의 `kFirmwareVersion` 를 기준으로 한다.
 
 ## 목차
 
@@ -10,7 +10,7 @@
 - 하드웨어 구성
 - 통신 구조
 - USB HID 동작
-- 제어 PC 웹 페이지
+- 제어 PC 웹 페이지(Text/File)
 - 브라우저 동작 흐름
 - 전원 정책
 - 개발 환경
@@ -28,7 +28,8 @@
 본 프로젝트는 **nRF52840 기반 Pro Micro 호환 보드**를 이용하여 다음 기능을 수행하는 장치를 제작한다.
 
 - 웹브라우저에서 BLE(Bluetooth Low Energy)로 장치를 제어
-- Control PC의 브라우저에서 텍스트를 입력하고 [시작(Flush)]을 누르면, Flusher가 Target PC의 포커싱된 커서 위치에 해당 텍스트를 키보드 입력으로 전송(Flush)
+- (Text Flusher) Control PC의 브라우저에서 텍스트를 입력하고 [시작(Flush)]을 누르면, Flusher가 Target PC의 포커싱된 커서 위치에 해당 텍스트를 키보드 입력으로 전송(Flush)
+- (File Flusher, Windows) Control PC에서 파일/폴더를 선택하면, Target PC에서 PowerShell로 파일을 생성하고 SHA-256로 검증한다.
 - 외부 인터넷 연결 없이 동작
 - 제어용 PC(Control PC)와 Target PC는 서로 다른 장치임.
 
@@ -108,6 +109,14 @@ v
 - 값(LE): `[capacityBytes(u16)][freeBytes(u16)]`
   - 브라우저는 이 값을 이용해 **디바이스 RX 버퍼에 여유가 있을 때만** 다음 청크를 전송한다.
 
+##### Characteristic: Macro (Windows 자동화)
+- 속성: Write (with response)
+- Characteristic UUID: `f3641404-00b0-4240-ba50-05ca45bf8abc`
+- 목적:
+  - File Flusher에서 Win+R, Enter 같은 특수키를 안전하게 실행하기 위한 채널
+  - 텍스트 전송(Flush Text)과 분리하여 Text Flusher의 안정성을 유지
+- 포맷: `[cmd(u8)][len(u8)][payload(len bytes)]`
+
 ---
 
 ### 긴 텍스트 안정화(정확성 우선)
@@ -160,11 +169,14 @@ v
 
 ---
 
-### 웹 UI 구성
+### 웹 UI 구성(현재 구현)
 
-- [장치 연결] 버튼
-- 텍스트 입력창(멀티라인 가능)
-- [시작(Flush)] 버튼
+- 랜딩: [index.html](index.html)
+- Text Flusher: [web/text.html](web/text.html) + [web/text.js](web/text.js)
+  - [장치 연결] / 텍스트 입력 / Start/Pause/Resume/Stop
+- File Flusher(Windows): [web/files.html](web/files.html) + [web/files.js](web/files.js)
+  - 대상 디렉토리 / 파일 또는 폴더 선택 / Start/Pause/Resume/Stop
+  - Win+R → PowerShell 실행 자동화 + Base64 디코드 + SHA-256 검증
 
 ---
 
@@ -206,12 +218,13 @@ v
 
 ## ✅ 완료 기준 (Acceptance Criteria)
 
-- [ ] (전제) Flusher가 Target PC에 USB로 연결되어 전원이 공급된다.
-- [ ] 브라우저에서 BLE 연결 성공
-- [ ] 브라우저에서 텍스트 입력 후 [시작(Flush)] 실행 가능
-- [ ] Target PC의 포커싱된 입력 커서 위치에 텍스트가 키보드 입력으로 입력된다.
-- [ ] 인터넷 없이 동작
-- [ ] 제어 PC / 타겟 PC 분리 사용이 전제임
+- [x] (전제) Flusher가 Target PC에 USB로 연결되어 전원이 공급된다.
+- [x] 브라우저에서 BLE 연결 성공
+- [x] (Text) 브라우저에서 텍스트 입력 후 [시작(Flush)] 실행 가능
+- [x] (Text) Target PC의 포커싱된 입력 커서 위치에 텍스트가 키보드 입력으로 입력된다.
+- [x] (Files/Windows) 파일/폴더 선택 → Target PC에 파일 생성 + SHA-256 검증
+- [x] 인터넷 없이 동작
+- [x] 제어 PC / 타겟 PC 분리 사용이 전제임
 
 ---
 
@@ -219,15 +232,16 @@ v
 
 - BLE 페어링 보안 강화
 - HID 키맵 확장
+- (Files) PowerShell 런처를 `-EncodedCommand` + 부트스트랩 청크 조립 방식으로 개선(완료)
+- (Files) 대용량 파일 처리 최적화(청크/딜레이 자동 튜닝)
+- (공통) 디버그 로그/리포트(파일별 성공/실패/재시도/해시 결과)
 
 ---
 
 ## 🧩 TODO
 
-- BLE GATT Service/Characteristic UUID 확정
-- Flush Text Write 방식 확정 (Write / Write Without Response)
-- Flush Text 전송 한계 및 정책 확정 (1회 최대 길이, 긴 텍스트 처리)
-- 개행/탭 등 제어문자 처리 규칙 확정 (예: `\n` → Enter, `\t` → Tab)
-- 지원 문자 범위 및 키보드 레이아웃 가정 확정 (예: US 키보드 기준 여부)
-- USB HID 출력 타이밍 확정 (키 입력 간 딜레이 등)
-- 최소 보안/운영 정책 확정 (예: 페어링/재연결 정책)
+현재 구현에서 핵심 TODO는 “정확성/신뢰성 강화”에 집중한다.
+
+- (Files) 포커스 이탈/팝업/UAC로 인한 실패 대비(재시도 전략, 사용자 가이드)
+- (Files) 경로/파일명 특수문자 케이스 확장 테스트
+- (공통) 설정 기본값(딜레이/청크)을 보수적으로 재정의하고, “정확성 우선 프리셋” 제공

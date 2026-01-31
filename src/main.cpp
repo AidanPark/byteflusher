@@ -4,7 +4,7 @@
 #include <bluefruit.h>
 
 // 펌웨어 버전 (메이저.마이너.패치)
-static const char* kFirmwareVersion = "1.0.3";
+static const char* kFirmwareVersion = "1.1.0";
 
 static const char* build_ble_device_name() {
   // 동일 기기가 여러 대일 때, 광고 이름만으로도 구분 가능하게 한다.
@@ -25,6 +25,9 @@ static const char* kFlusherServiceUuid = "f3641400-00b0-4240-ba50-05ca45bf8abc";
 static const char* kFlushTextCharUuid = "f3641401-00b0-4240-ba50-05ca45bf8abc";
 static const char* kConfigCharUuid = "f3641402-00b0-4240-ba50-05ca45bf8abc";
 static const char* kStatusCharUuid = "f3641403-00b0-4240-ba50-05ca45bf8abc";
+// Macro / special keys (Windows automation)
+// - Separate characteristic to avoid impacting text flusher protocol.
+static const char* kMacroCharUuid = "f3641404-00b0-4240-ba50-05ca45bf8abc";
 
 // Flush Text 패킷 포맷(LE)
 // - [sessionId(2)][seq(2)][payload...]
@@ -547,6 +550,125 @@ static void config_write_cb(uint16_t /*conn_hdl*/, BLECharacteristic* /*chr*/, u
 }
 
 // -----------------------------
+// Macro queue (BLE write -> loop)
+// -----------------------------
+// Format (byte stream): [cmd(u8)][len(u8)][payload...]
+// Commands are executed in the main loop to avoid blocking BLE callbacks.
+constexpr size_t kMacroBufferSize = 256;
+static uint8_t macro_buf[kMacroBufferSize];
+static volatile size_t macro_head = 0;
+static volatile size_t macro_tail = 0;
+
+static inline size_t macro_next(size_t v) {
+  return (v + 1) % kMacroBufferSize;
+}
+
+static inline uint16_t macro_used_bytes() {
+  const size_t head = macro_head;
+  const size_t tail = macro_tail;
+  if (head >= tail) {
+    return static_cast<uint16_t>(head - tail);
+  }
+  return static_cast<uint16_t>(kMacroBufferSize - (tail - head));
+}
+
+static bool macro_push(uint8_t b) {
+  size_t next = macro_next(macro_head);
+  if (next == macro_tail) {
+    return false;
+  }
+  macro_buf[macro_head] = b;
+  macro_head = next;
+  return true;
+}
+
+static inline uint8_t macro_peek(uint16_t offset) {
+  const uint16_t used = macro_used_bytes();
+  if (offset >= used) {
+    return 0;
+  }
+  const size_t idx = (macro_tail + offset) % kMacroBufferSize;
+  return macro_buf[idx];
+}
+
+static void macro_drop(uint16_t n) {
+  if (n == 0) return;
+  noInterrupts();
+  for (uint16_t i = 0; i < n; i++) {
+    if (macro_tail == macro_head) break;
+    macro_tail = macro_next(macro_tail);
+  }
+  interrupts();
+}
+
+static void hid_send_combo(uint8_t modifier, uint8_t keycode) {
+  hid_send_key(modifier, keycode);
+}
+
+static bool macro_try_process_one() {
+  if (!hid_ready()) return false;
+  if (g_paused) return false;
+
+  const uint16_t used = macro_used_bytes();
+  if (used < 2) return false;
+
+  const uint8_t cmd = macro_peek(0);
+  const uint8_t len = macro_peek(1);
+  const uint16_t total = static_cast<uint16_t>(2u + len);
+  if (used < total) return false;
+
+  // Drop header, then consume payload as needed.
+  macro_drop(2);
+
+  switch (cmd) {
+    case 0x01:  // WIN+R
+      hid_send_combo(KEYBOARD_MODIFIER_LEFTGUI, HID_KEY_R);
+      break;
+    case 0x02:  // ENTER
+      hid_send_combo(0, HID_KEY_ENTER);
+      break;
+    case 0x03:  // ESC
+      hid_send_combo(0, HID_KEY_ESCAPE);
+      break;
+    case 0x04: {  // TYPE_ASCII
+      // Macro typing is intended for OS dialogs/CLI; keep it in English mode.
+      switch_to_english();
+      for (uint8_t i = 0; i < len; i++) {
+        const char c = static_cast<char>(macro_peek(0));
+        macro_drop(1);
+        type_ascii_char(c);
+      }
+      return true;
+    }
+    case 0x05: {  // SLEEP_MS (u16 LE)
+      uint16_t ms = 0;
+      if (len >= 2) {
+        const uint8_t b0 = macro_peek(0);
+        const uint8_t b1 = macro_peek(1);
+        ms = static_cast<uint16_t>(b0) | (static_cast<uint16_t>(b1) << 8);
+      }
+      macro_drop(len);
+      if (ms > 0) {
+        delay(ms);
+      }
+      return true;
+    }
+    case 0x06:  // FORCE_ENGLISH (best-effort)
+      switch_to_english();
+      break;
+    default:
+      // Unknown command: consume payload and ignore.
+      break;
+  }
+
+  // Consume any payload bytes not explicitly consumed.
+  if (len > 0) {
+    macro_drop(len);
+  }
+  return true;
+}
+
+// -----------------------------
 // RX 버퍼 (BLE write -> loop)
 // -----------------------------
 // 기본값은 작게 시작하고, 유실이 보이면 웹에서 Delay를 올리는 방식으로 안정화한다.
@@ -611,6 +733,7 @@ BLEService flusher_service(kFlusherServiceUuid);
 BLECharacteristic flush_text_char(kFlushTextCharUuid);
 BLECharacteristic config_char(kConfigCharUuid);
 BLECharacteristic status_char(kStatusCharUuid);
+BLECharacteristic macro_char(kMacroCharUuid);
 
 static uint32_t g_last_status_notify_ms = 0;
 static uint16_t g_last_status_free = 0;
@@ -639,6 +762,16 @@ static void notify_status_if_needed(bool force) {
   g_last_status_free = free_bytes;
 }
 
+static void macro_write_cb(uint16_t /*conn_hdl*/, BLECharacteristic* /*chr*/, uint8_t* data, uint16_t len) {
+  if (len == 0) return;
+
+  // Backpressure with write(with response): block until the macro queue has room.
+  for (uint16_t i = 0; i < len; i++) {
+    while (!macro_push(data[i])) {
+      delay(1);
+    }
+  }
+}
 static volatile uint16_t g_session_id = 0;
 static volatile uint16_t g_expected_seq = 0;
 
@@ -678,7 +811,13 @@ static void flush_text_write_cb(uint16_t /*conn_hdl*/, BLECharacteristic* /*chr*
     if (seq != 0) {
       return;
     }
+    // 새 작업 시작: 정확성 우선
+    // - 이전 작업의 잔여 RX 데이터를 버리고
+    // - UTF-8/CRLF/한영모드 내부 상태를 초기화한다(추가 키 입력은 하지 않는다).
+    rb_clear();
+    reset_input_state_no_keystroke();
     reset_session(session_id);
+    notify_status_if_needed(true);
   }
 
   // 재시도/중복 청크는 무시
@@ -749,6 +888,7 @@ void setup() {
   log_kv("Char UUID", kFlushTextCharUuid);
   log_kv("Config UUID", kConfigCharUuid);
   log_kv("Status UUID", kStatusCharUuid);
+  log_kv("Macro UUID", kMacroCharUuid);
 
   // Target PC에 HID 키보드로 인식되도록 USB 초기화
   hid_begin();
@@ -778,6 +918,12 @@ void setup() {
   config_char.setWriteCallback(config_write_cb);
   config_char.begin();
 
+  // Macro / special keys (Windows automation)
+  macro_char.setProperties(CHR_PROPS_WRITE);
+  macro_char.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  macro_char.setWriteCallback(macro_write_cb);
+  macro_char.begin();
+
   // 장치 상태(Flow Control)
   // payload: [capacityBytes(u16 LE)][freeBytes(u16 LE)]
   status_char.setProperties(CHR_PROPS_READ | CHR_PROPS_NOTIFY);
@@ -802,6 +948,12 @@ void loop() {
   // Pause: 장치 내부 큐를 소비(타이핑)하지 않는다.
   if (g_paused) {
     delay(5);
+    return;
+  }
+
+  // Macro actions first (e.g., Win+R) to avoid interleaving with text bytes.
+  if (macro_try_process_one()) {
+    notify_status_if_needed(false);
     return;
   }
 

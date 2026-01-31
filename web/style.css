@@ -130,6 +130,30 @@ button {
   cursor: pointer;
 }
 
+/* Files page: make '파일 선택/폴더 선택/대상 디렉토리(절대경로)' the same visual level */
+.controlButton,
+.controlLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.controlLabel {
+  display: block;
+  margin-top: 2px;
+}
+
+.controlOption {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.controlOption input[type="radio"] {
+  margin: 0;
+}
+
 button.primary {
   background: rgba(106, 163, 255, 0.22);
   border-color: rgba(106, 163, 255, 0.35);
@@ -222,6 +246,38 @@ textarea:focus {
   color: var(--text);
 }
 
+/* 파일 Flush: 대상 디렉토리 입력은 카드 끝까지 넓게 사용 */
+#targetDir {
+  width: 100%;
+}
+
+.textField {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.20);
+  color: var(--text);
+  outline: none;
+}
+
+.sidebar .textField {
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.textField:focus {
+  border-color: rgba(106, 163, 255, 0.55);
+  box-shadow: 0 0 0 3px rgba(106, 163, 255, 0.12);
+}
+
+#pickInput {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
 .inline select {
   width: 180px;
   padding: 6px 8px;
@@ -247,6 +303,30 @@ textarea:focus {
   margin-top: 12px;
   display: grid;
   gap: 6px;
+}
+
+.sidebarDivider {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 12px 0;
+}
+
+.settingsToast {
+  margin-left: auto;
+  min-height: 1em;
+}
+
+.validityLine {
+  margin-top: 6px;
+  min-height: 1em;
+}
+
+.validityOk {
+  color: rgba(137, 240, 194, 0.92);
+}
+
+.validityBad {
+  color: rgba(255, 154, 154, 0.92);
 }
 
 .muted { color: var(--muted); }

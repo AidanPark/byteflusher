@@ -1,16 +1,38 @@
 <!doctype html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ByteFlusher</title>
-    <meta http-equiv="refresh" content="0; url=./web/" />
-    <script>
-      // Fallback for browsers that ignore meta refresh.
-      window.location.replace("./web/");
-    </script>
+    <title>Byte Flusher</title>
+    <link rel="stylesheet" href="./web/style.css" />
   </head>
   <body>
-    Redirecting to <a href="./web/">ByteFlusher UI</a>...
+    <main class="container">
+      <header class="topHeader">
+        <h1>🤖 Byte Flusher</h1>
+        <p class="muted" style="font-size: 16px; line-height: 1.5;">브라우저(Web Bluetooth)에서 Flusher에 BLE로 텍스트를 전송하면, Target PC에 USB 키보드(HID) 입력으로 정확하게 타이핑합니다.</p>
+      </header>
+
+      <section class="card" style="margin-top: 14px;">
+        <ul class="muted" style="margin: 0; padding-left: 18px; font-size: 16px; line-height: 1.55;">
+          <li>Control PC: Chrome/Edge (Web Bluetooth)</li>
+          <li>Flusher: BLE 수신 → 버퍼링 → USB HID 키보드 출력</li>
+          <li>Target PC: USB 키보드 입력을 받아 텍스트/스크립트를 생성</li>
+        </ul>
+      </section>
+
+      <section style="margin-top: 18px; display: flex; justify-content: center;">
+        <div style="width: min(920px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
+          <a href="./web/text.html" class="card" style="color: inherit; text-decoration: none; display: block; padding: 18px; text-align: center;">
+            <div style="font-size: 22px; font-weight: 700;">📄 텍스트 Flush</div>
+            <div class="muted" style="margin-top: 10px; font-size: 16px;">텍스트를 BLE로 보내서 Target PC에 타이핑</div>
+          </a>
+          <a href="./web/files.html" class="card" style="color: inherit; text-decoration: none; display: block; padding: 18px; text-align: center;">
+            <div style="font-size: 22px; font-weight: 700;">📁 파일 Flush</div>
+            <div class="muted" style="margin-top: 10px; font-size: 16px;">PowerShell 스크립트로 파일 생성/검증 (Windows)</div>
+          </a>
+        </div>
+      </section>
+    </main>
   </body>
 </html>

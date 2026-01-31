@@ -3,14 +3,13 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Byte Flusher (BLE → USB HID)</title>
+    <title>Byte Flusher - Text Flush</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <main class="container">
       <header class="topHeader">
-        <h1>🤖 Byte Flusher ⌨️</h1>
-        <p class="muted">브라우저(Web Bluetooth)로 Flusher에 연결해 텍스트를 Flush합니다.</p>
+        <h1><a href="../index.html" style="color: inherit; text-decoration: none;">🤖 Byte Flusher - Text 📄</a></h1>
       </header>
 
       <div class="layout">
@@ -56,8 +55,9 @@
                 </p>
               </div>
 
-              <h2 class="settingsTitle" style="margin-top: 14px;">입력설정</h2>
+              <hr class="sidebarDivider" />
 
+              <h2 class="settingsTitle" style="margin-top: 14px;">입력설정</h2>
 
               <div class="grid2" style="margin-top: 12px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
@@ -92,7 +92,7 @@
                 <label class="inline" style="width: 100%; justify-content: space-between;">
                   키 입력 후 대기 (ms)
                   <input id="typingDelayMs" type="number" min="0" max="1000" value="30" />
-                </label>                
+                </label>
                 <p class="muted small" style="margin: -2px 0 0;">
                   각 키 입력(문자 1개) 후 대기 시간입니다. 너무 짧으면 키 입력이 누락되거나(특히 HID/IME) 글자가 깨질 수 있습니다.
                 </p>
@@ -116,14 +116,27 @@
               </p>
 
               <div class="row" style="margin-top: 12px;">
-                <button id="btnApplyDeviceSettings" class="primary" disabled>장치설정 적용</button>
+                <button id="btnApplyDeviceSettings" class="primary" disabled>설정 적용</button>
                 <button id="btnResetSettings">설정 초기화</button>
+                <span id="textSettingsToast" class="muted small settingsToast" aria-live="polite"></span>
               </div>
             </fieldset>
           </section>
-          
+
           <section class="card">
             <h2 class="sidebarTitle">참고</h2>
+            <div class="muted small" style="margin: 0 0 10px 0;">
+              <div style="font-weight: 600; margin-bottom: 4px;">전체 실행 절차(요약)</div>
+              <div>
+                텍스트 전처리(치환/공백옵션) → BLE 패킷 분할(청크) → 전송 시작(Start)
+                → (선택) 장치 타이밍 설정 적용 → 청크 전송 반복(writeValue)
+                → 장치(USB HID)가 실제로 타이핑 → 전송 완료(Stop/완료)
+              </div>
+              <div style="margin-top: 6px;">
+                화면의 지표 의미: 예상/기준은 입력/설정으로 계산된 값(프리뷰 가능), 완료율은 전송된 bytes 비율 기반 근사,
+                시작/경과/종료는 wall-clock 기준 표시
+              </div>
+            </div>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
               <li>Web Bluetooth는 Chrome/Edge에서만 동작합니다.</li>
               <li>Target PC는 USB 키보드 장치를 허용해야 합니다.</li>
@@ -172,12 +185,15 @@
               <button id="btnResume" disabled>Resume</button>
               <button id="btnStop" class="danger" disabled>Stop</button>
             </div>
+          </section>
 
+          <section class="card" style="margin-top: 14px;">
+            <h2 class="sidebarTitle" style="margin-top: 0;">상태</h2>
+            <p class="muted small" style="margin-top: 6px;">(기능 구현은 이후 단계에서 연결합니다)</p>
           </section>
         </section>
       </div>
     </main>
-
-    <script type="module" src="./app.js"></script>
+    <script type="module" src="./text.js"></script>
   </body>
 </html>

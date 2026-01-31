@@ -1,4 +1,6 @@
-// Byte Flusher용 Web Bluetooth 클라이언트
+// ByteFlusher Web Bluetooth 클라이언트 (Text Flush 전용)
+// - 이 파일은 web/text.html 화면에서 "텍스트를 정확하게 타이핑"하는 기능만 담당한다.
+// - 파일/폴더 Flush(베이스64/해시 검증 + PowerShell 자동화)는 web/files.js가 담당한다.
 // 참고: Web Bluetooth는 HTTPS 또는 localhost가 필요하다.
 
 // 이 UUID는 펌웨어(src/main.cpp)와 항상 동일해야 한다.
@@ -51,6 +53,7 @@ const els = {
   modeSwitchDelayMs: document.getElementById('modeSwitchDelayMs'),
   keyPressDelayMs: document.getElementById('keyPressDelayMs'),
   btnApplyDeviceSettings: document.getElementById('btnApplyDeviceSettings'),
+  textSettingsToast: document.getElementById('textSettingsToast'),
   settingsFieldset: document.getElementById('settingsFieldset'),
   deviceFieldset: document.getElementById('deviceFieldset'),
   etaText: document.getElementById('etaText'),
@@ -60,6 +63,21 @@ const els = {
   endTimeText: document.getElementById('endTimeText'),
   estimateBasisText: document.getElementById('estimateBasisText'),
 };
+
+let textSettingsToastTimerId = null;
+
+function showTextSettingsToast(text, ttlMs = 1000) {
+  if (!els.textSettingsToast) return;
+  if (textSettingsToastTimerId) {
+    clearTimeout(textSettingsToastTimerId);
+    textSettingsToastTimerId = null;
+  }
+  els.textSettingsToast.textContent = String(text ?? '').trim();
+  textSettingsToastTimerId = setTimeout(() => {
+    if (els.textSettingsToast) els.textSettingsToast.textContent = '';
+    textSettingsToastTimerId = null;
+  }, Math.max(200, Number(ttlMs) || 1000));
+}
 
 let device = null;
 let server = null;
@@ -279,6 +297,56 @@ function clearJobMetrics() {
   if (els.progressText) els.progressText.textContent = '-';
   if (els.endTimeText) els.endTimeText.textContent = '-';
   if (els.estimateBasisText) els.estimateBasisText.textContent = '-';
+}
+
+function updatePreStartMetrics() {
+  // Policy: when input changes, show a fresh estimate basis and reset other metrics.
+  // Do not override metrics during an active flush.
+  if (flushInProgress) return;
+
+  // Clear any previous job state so metrics don't look like they belong to the last run.
+  if (job?.intervalId) {
+    try {
+      clearInterval(job.intervalId);
+    } catch {
+      // ignore
+    }
+  }
+  job = null;
+
+  const rawText = els.textInput?.value ?? '';
+  const pre = preprocessTextForFirmware(rawText);
+  const bytes = new TextEncoder().encode(pre.text);
+
+  const chunkSize = clampNumber(els.chunkSize?.value, 1, 200, DEFAULT_CHUNK_SIZE);
+  const chunkDelayMs = clampNumber(els.chunkDelay?.value, 0, 200, DEFAULT_CHUNK_DELAY);
+  const timing = getDeviceTimingSettings();
+  const toggleKey = getToggleKeySetting();
+
+  const est = computeEstimateMs({
+    text: pre.text,
+    totalBytes: bytes.length,
+    chunkSize,
+    chunkDelayMs,
+    typingDelayMs: timing.typingDelayMs,
+    modeSwitchDelayMs: timing.modeSwitchDelayMs,
+    keyPressDelayMs: timing.keyPressDelayMs,
+  });
+
+  // Reset runtime-only metrics.
+  if (els.startTimeText) els.startTimeText.textContent = '-';
+  if (els.elapsedText) els.elapsedText.textContent = '-';
+  if (els.progressText) els.progressText.textContent = '-';
+  if (els.endTimeText) els.endTimeText.textContent = '-';
+
+  // Preview-only metrics.
+  if (els.etaText) {
+    els.etaText.textContent = bytes.length > 0 ? `총 ${formatMinutes(est.estimatedMs)}분` : '-';
+  }
+  if (els.estimateBasisText) {
+    const replacedNote = pre.replacedCount > 0 ? ` / 치환 ${pre.replacedCount}개("${pre.replacement}")` : '';
+    els.estimateBasisText.textContent = `preview / ${bytes.length} bytes / ${est.keystrokes} keys, switch ${est.modeSwitches}${replacedNote} / chunk=${chunkSize}, delay=${chunkDelayMs}ms / typing=${timing.typingDelayMs}ms, mode=${timing.modeSwitchDelayMs}ms, key=${timing.keyPressDelayMs}ms / toggle=${toggleKey}`;
+  }
 }
 
 function startJobMetrics({
@@ -995,6 +1063,7 @@ if (els.unsupportedReplacement) {
 
   els.unsupportedReplacement.addEventListener('input', () => {
     localStorage.setItem(LS_UNSUPPORTED_REPLACEMENT, getUnsupportedReplacement());
+    updatePreStartMetrics();
   });
 }
 
@@ -1004,6 +1073,7 @@ if (els.chunkSize) {
   els.chunkSize.addEventListener('input', () => {
     const v = clampNumber(els.chunkSize.value, 1, 200, DEFAULT_CHUNK_SIZE);
     saveNumberSetting(LS_CHUNK_SIZE, v);
+    updatePreStartMetrics();
   });
 }
 
@@ -1013,6 +1083,7 @@ if (els.chunkDelay) {
   els.chunkDelay.addEventListener('input', () => {
     const v = clampNumber(els.chunkDelay.value, 0, 200, DEFAULT_CHUNK_DELAY);
     saveNumberSetting(LS_CHUNK_DELAY, v);
+    updatePreStartMetrics();
   });
 }
 
@@ -1030,6 +1101,7 @@ if (els.ignoreLeadingWhitespace) {
   els.ignoreLeadingWhitespace.checked = saved;
   els.ignoreLeadingWhitespace.addEventListener('change', () => {
     saveBoolSetting(LS_IGNORE_LEADING_WHITESPACE, getIgnoreLeadingWhitespaceSetting());
+    updatePreStartMetrics();
   });
 }
 
@@ -1058,6 +1130,7 @@ if (els.btnResetSettings) {
     if (els.ignoreLeadingWhitespace) els.ignoreLeadingWhitespace.checked = DEFAULT_IGNORE_LEADING_WHITESPACE;
 
     setStatus('설정 초기화됨', '기본값으로 되돌렸습니다.');
+    showTextSettingsToast('초기화됨', 1000);
   });
 }
 
@@ -1075,11 +1148,26 @@ initDeviceTimingSettingInput(els.typingDelayMs, LS_TYPING_DELAY_MS, 0, 1000, DEF
 initDeviceTimingSettingInput(els.modeSwitchDelayMs, LS_MODE_SWITCH_DELAY_MS, 0, 3000, DEFAULT_MODE_SWITCH_DELAY_MS);
 initDeviceTimingSettingInput(els.keyPressDelayMs, LS_KEY_PRESS_DELAY_MS, 0, 300, DEFAULT_KEY_PRESS_DELAY_MS);
 
+// Update estimate preview when device timing changes.
+for (const el of [els.typingDelayMs, els.modeSwitchDelayMs, els.keyPressDelayMs]) {
+  if (!el) continue;
+  el.addEventListener('input', () => {
+    updatePreStartMetrics();
+  });
+}
+
 if (els.toggleKey) {
   const saved = localStorage.getItem(LS_TOGGLE_KEY);
   setToggleKeySetting(saved || DEFAULT_TOGGLE_KEY);
   els.toggleKey.addEventListener('input', () => {
     localStorage.setItem(LS_TOGGLE_KEY, getToggleKeySetting());
+    updatePreStartMetrics();
+  });
+}
+
+if (els.textInput) {
+  els.textInput.addEventListener('input', () => {
+    updatePreStartMetrics();
   });
 }
 
@@ -1087,6 +1175,7 @@ if (els.btnApplyDeviceSettings) {
   els.btnApplyDeviceSettings.addEventListener('click', async () => {
     try {
       await applyDeviceSettings();
+      showTextSettingsToast('저장됨', 1000);
     } catch (err) {
       setStatus('오류', err?.message ?? String(err));
     }
