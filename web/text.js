@@ -3,6 +3,8 @@
 // - 파일/폴더 Flush(베이스64/해시 검증 + PowerShell 자동화)는 web/files.js가 담당한다.
 // 참고: Web Bluetooth는 HTTPS 또는 localhost가 필요하다.
 
+import { wireDeviceHelpModal } from './device_help_modal.js';
+
 // 이 UUID는 펌웨어(src/main.cpp)와 항상 동일해야 한다.
 const SERVICE_UUID = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
 const FLUSH_TEXT_CHAR_UUID = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
@@ -41,6 +43,8 @@ const els = {
   btnStop: document.getElementById('btnStop'),
   statusText: document.getElementById('statusText'),
   detailsText: document.getElementById('detailsText'),
+  startHintText: document.getElementById('startHintText'),
+  startChecklistText: document.getElementById('startChecklistText'),
   textInput: document.getElementById('textInput'),
   chunkSize: document.getElementById('chunkSize'),
   chunkDelay: document.getElementById('chunkDelay'),
@@ -62,6 +66,8 @@ const els = {
   progressText: document.getElementById('progressText'),
   endTimeText: document.getElementById('endTimeText'),
   estimateBasisText: document.getElementById('estimateBasisText'),
+  totalBytesText: document.getElementById('totalBytesText'),
+  stageText: document.getElementById('stageText'),
 };
 
 let textSettingsToastTimerId = null;
@@ -293,10 +299,49 @@ function computeEstimateMs({
 function clearJobMetrics() {
   if (els.etaText) els.etaText.textContent = '-';
   if (els.startTimeText) els.startTimeText.textContent = '-';
+  if (els.totalBytesText) els.totalBytesText.textContent = '-';
+  if (els.stageText) els.stageText.textContent = '-';
   if (els.elapsedText) els.elapsedText.textContent = '-';
   if (els.progressText) els.progressText.textContent = '-';
   if (els.endTimeText) els.endTimeText.textContent = '-';
   if (els.estimateBasisText) els.estimateBasisText.textContent = '-';
+}
+
+function setStartHint(text) {
+  if (!els.startHintText) return;
+  els.startHintText.textContent = String(text ?? '');
+}
+
+function setStartChecklist(text) {
+  if (!els.startChecklistText) return;
+  els.startChecklistText.textContent = String(text ?? '');
+}
+
+function updateStartEnabled() {
+  // Match Files page UX: show hint + checklist even before connection.
+  const isConnected = Boolean(device?.gatt?.connected);
+  const isRunning = Boolean(flushInProgress);
+
+  const rawText = els.textInput?.value ?? '';
+  const pre = preprocessTextForFirmware(rawText);
+  const bytes = new TextEncoder().encode(pre.text);
+  const hasText = bytes.length > 0;
+
+  const ok = isConnected && !isRunning && hasText;
+  if (els.btnStart) els.btnStart.disabled = !ok;
+
+  let hint = '';
+  if (!isConnected) hint = '장치를 먼저 연결하세요.';
+  else if (!hasText) hint = '텍스트를 입력하세요.';
+  setStartHint(hint);
+
+  const statusReason = ok ? '' : ` (${!isConnected ? '장치 연결 필요' : '텍스트 입력 필요'})`;
+  const checklist = [
+    `${isConnected ? '[OK]' : '[ ]'} 장치 연결 ${isConnected ? '됨' : '필요'}`,
+    `${hasText ? '[OK]' : '[ ]'} 소스: 텍스트 ${hasText ? '입력됨' : '입력 필요'}`,
+    `${ok ? '[OK]' : '[ ]'} 상태: ${ok ? '시작 가능' : `시작 불가${statusReason}`}`,
+  ].join('\n');
+  setStartChecklist(checklist);
 }
 
 function updatePreStartMetrics() {
@@ -335,6 +380,8 @@ function updatePreStartMetrics() {
 
   // Reset runtime-only metrics.
   if (els.startTimeText) els.startTimeText.textContent = '-';
+  if (els.totalBytesText) els.totalBytesText.textContent = bytes.length > 0 ? `${bytes.length} bytes` : '-';
+  if (els.stageText) els.stageText.textContent = '-';
   if (els.elapsedText) els.elapsedText.textContent = '-';
   if (els.progressText) els.progressText.textContent = '-';
   if (els.endTimeText) els.endTimeText.textContent = '-';
@@ -347,6 +394,8 @@ function updatePreStartMetrics() {
     const replacedNote = pre.replacedCount > 0 ? ` / 치환 ${pre.replacedCount}개("${pre.replacement}")` : '';
     els.estimateBasisText.textContent = `preview / ${bytes.length} bytes / ${est.keystrokes} keys, switch ${est.modeSwitches}${replacedNote} / chunk=${chunkSize}, delay=${chunkDelayMs}ms / typing=${timing.typingDelayMs}ms, mode=${timing.modeSwitchDelayMs}ms, key=${timing.keyPressDelayMs}ms / toggle=${toggleKey}`;
   }
+
+  updateStartEnabled();
 }
 
 function startJobMetrics({
@@ -460,6 +509,12 @@ function updateJobMetrics() {
 
   if (els.elapsedText) els.elapsedText.textContent = formatDuration(elapsedWallMs);
 
+  if (els.totalBytesText) {
+    const total = Math.max(0, Number(job.totalBytes) || 0);
+    const sent = Math.max(0, Math.min(total, Number(job.sentBytes) || 0));
+    els.totalBytesText.textContent = total > 0 ? `${sent}/${total} bytes` : '-';
+  }
+
   const byteRatio = job.totalBytes > 0 ? Math.max(0, Math.min(1, job.sentBytes / job.totalBytes)) : 0;
   const totalKeys = Math.max(0, Number(job.keystrokes) || 0);
   const sentKeys = totalKeys > 0 ? Math.min(totalKeys, Math.round(totalKeys * byteRatio)) : 0;
@@ -481,12 +536,16 @@ function updateJobMetrics() {
 function setStatus(text, details = '') {
   els.statusText.textContent = text;
   els.detailsText.textContent = details;
+
+  // Files page shows current stage in the main panel; mirror that for Text runs.
+  if (els.stageText && flushInProgress) {
+    els.stageText.textContent = String(text ?? '-') || '-';
+  }
 }
 
 function setUiConnected(connected) {
   els.btnConnect.disabled = connected;
   els.btnDisconnect.disabled = !connected;
-  if (els.btnStart) els.btnStart.disabled = !connected;
   if (els.btnPause) els.btnPause.disabled = true;
   if (els.btnResume) els.btnResume.disabled = true;
   if (els.btnApplyDeviceSettings) {
@@ -495,6 +554,8 @@ function setUiConnected(connected) {
   if (!connected) {
     els.btnStop.disabled = true;
   }
+
+  updateStartEnabled();
 }
 
 function setUiRunState({ running, paused: isPaused }) {
@@ -514,7 +575,6 @@ function setUiRunState({ running, paused: isPaused }) {
   els.btnConnect.disabled = running || isConnected;
   els.btnDisconnect.disabled = running ? true : !isConnected;
 
-  if (els.btnStart) els.btnStart.disabled = running || !isConnected;
   if (els.btnPause) els.btnPause.disabled = !running || !isConnected || isPaused;
   if (els.btnResume) els.btnResume.disabled = !running || !isConnected || !isPaused;
   els.btnStop.disabled = !running;
@@ -522,6 +582,8 @@ function setUiRunState({ running, paused: isPaused }) {
   if (els.btnApplyDeviceSettings) {
     els.btnApplyDeviceSettings.disabled = running || !isConnected;
   }
+
+  updateStartEnabled();
 }
 
 async function waitWhilePaused(offset, total) {
@@ -614,6 +676,23 @@ function preprocessTextForFirmware(input) {
   return { text: out, replacedCount, replacement };
 }
 
+function isLikelyPairingRequiredError(err) {
+  const name = (err?.name ?? '').toString();
+  const msg = (err?.message ?? String(err ?? '')).toString();
+  if (name === 'SecurityError') return true;
+  if (/insufficient\s+authentication|insufficient\s+encryption|authentication\s+required|encryption\s+required/i.test(msg)) return true;
+  if (/GATT\s+operation\s+not\s+permitted|not\s+permitted/i.test(msg)) return true;
+  return false;
+}
+
+function getPairingHelpText() {
+  return [
+    'BLE 보안(페어링/본딩)이 필요합니다.',
+    'Windows: 설정 → Bluetooth 및 디바이스 → 디바이스 추가/관리에서 ByteFlusher를 페어링하세요.',
+    '페어링 후 다시 "장치 연결"을 눌러주세요.',
+  ].join(' ');
+}
+
 async function connect() {
   if (!navigator.bluetooth) {
     throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).');
@@ -629,17 +708,28 @@ async function connect() {
     optionalServices: [SERVICE_UUID],
   };
 
-  device = await navigator.bluetooth.requestDevice(requestOptions);
+  try {
+    device = await navigator.bluetooth.requestDevice(requestOptions);
+  } catch (err) {
+    // 사용자가 취소한 경우 등은 조용히 기존 상태를 유지한다.
+    const name = (err?.name ?? '').toString();
+    if (name === 'NotFoundError') {
+      setStatus('연결 안 됨', '');
+      setUiConnected(false);
+      return;
+    }
+    throw err;
+  }
 
   device.addEventListener('gattserverdisconnected', () => {
     if (flushInProgress && !stopRequested) {
       if (paused) {
-        setStatus('연결 끊김', '일시정지 상태입니다. Resume 시 재연결/전송을 계속합니다.');
+        setStatus('연결 끊김', '일시정지 중 연결 끊김');
       } else {
-        setStatus('연결 끊김', '재연결 시도 중...');
+        setStatus('연결 끊김', '전송 중 연결 끊김');
       }
     } else {
-      setStatus('연결 해제됨');
+      setStatus('연결 안 됨', '');
     }
     setUiConnected(false);
     server = null;
@@ -653,10 +743,21 @@ async function connect() {
   });
 
   setStatus('연결 중...', device.name ?? '');
-  server = await device.gatt.connect();
+  let service = null;
+  try {
+    server = await device.gatt.connect();
 
-  const service = await server.getPrimaryService(SERVICE_UUID);
-  flushChar = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
+    service = await server.getPrimaryService(SERVICE_UUID);
+    flushChar = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
+  } catch (err) {
+    if (isLikelyPairingRequiredError(err)) {
+      setStatus('페어링 필요', getPairingHelpText());
+      setUiConnected(false);
+      updateStartEnabled();
+      return;
+    }
+    throw err;
+  }
   try {
     configChar = await service.getCharacteristic(CONFIG_CHAR_UUID);
   } catch {
@@ -674,8 +775,7 @@ async function connect() {
     statusChar = null;
   }
 
-  const deviceIdNote = device?.id ? ` / id=${device.id}` : '';
-  setStatus('연결됨', `${device.name ?? 'BLE Device'}${deviceIdNote} / ${SERVICE_UUID}`);
+  setStatus('연결됨', `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
   setUiConnected(true);
 }
 
@@ -842,6 +942,7 @@ async function disconnect() {
   paused = false;
   pauseStatusShown = false;
   setUiRunState({ running: false, paused: false });
+  setStatus('연결 해제 중...', '');
   if (device?.gatt?.connected) {
     device.gatt.disconnect();
   }
@@ -878,7 +979,7 @@ async function flushText() {
   const rawText = els.textInput.value ?? '';
   const pre = preprocessTextForFirmware(rawText);
   const bytes = new TextEncoder().encode(pre.text);
-
+      setStatus('연결됨', `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
   // NOTE: UI에서 설정은 Start~Stop 동안 잠긴다.
   const initialChunkSize = clampNumber(els.chunkSize.value, 1, 200, DEFAULT_CHUNK_SIZE);
   const initialDelayMs = clampNumber(els.chunkDelay.value, 0, 200, DEFAULT_CHUNK_DELAY);
@@ -935,7 +1036,7 @@ async function flushText() {
     }
 
     if (!device?.gatt?.connected || !flushChar) {
-      setStatus('연결 끊김', '재연결 시도 중...');
+      setStatus('연결 끊김', '전송 중 연결 끊김');
       await reconnectLoop();
       continue;
     }
@@ -1184,5 +1285,7 @@ if (els.btnApplyDeviceSettings) {
 
 setUiConnected(false);
 setUiRunState({ running: false, paused: false });
-setStatus('연결 안 됨', '장치 연결을 눌러 시작하세요.');
+setStatus('연결 안 됨', '');
 clearJobMetrics();
+
+wireDeviceHelpModal({ variant: 'text' });

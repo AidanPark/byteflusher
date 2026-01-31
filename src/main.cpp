@@ -4,7 +4,7 @@
 #include <bluefruit.h>
 
 // 펌웨어 버전 (메이저.마이너.패치)
-static const char* kFirmwareVersion = "1.1.6";
+static const char* kFirmwareVersion = "1.1.10";
 
 static const char* build_ble_device_name() {
   // 동일 기기가 여러 대일 때, 광고 이름만으로도 구분 가능하게 한다.
@@ -908,26 +908,29 @@ void setup() {
   // 정확도 우선: write(with response)만 허용한다.
   // (브라우저가 ack를 받으며 재시도할 수 있어야 단 1글자도 유실되지 않는다.)
   flush_text_char.setProperties(CHR_PROPS_WRITE);
-  flush_text_char.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  // 보안(간단/정석): 암호화된 링크(페어링 이후)에서만 접근 허용
+  // - 스니핑으로 평문을 바로 읽히는 문제를 줄인다.
+  // - MITM까지 강제하지는 않는다(UX 부담 최소화).
+  flush_text_char.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
   flush_text_char.setWriteCallback(flush_text_write_cb);
   flush_text_char.begin();
 
   // 런타임 입력 타이밍 설정
   config_char.setProperties(CHR_PROPS_WRITE);
-  config_char.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  config_char.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
   config_char.setWriteCallback(config_write_cb);
   config_char.begin();
 
   // Macro / special keys (Windows automation)
   macro_char.setProperties(CHR_PROPS_WRITE);
-  macro_char.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  macro_char.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
   macro_char.setWriteCallback(macro_write_cb);
   macro_char.begin();
 
   // 장치 상태(Flow Control)
   // payload: [capacityBytes(u16 LE)][freeBytes(u16 LE)]
   status_char.setProperties(CHR_PROPS_READ | CHR_PROPS_NOTIFY);
-  status_char.setPermission(SECMODE_OPEN, SECMODE_OPEN);
+  status_char.setPermission(SECMODE_ENC_NO_MITM, SECMODE_ENC_NO_MITM);
   status_char.setFixedLen(4);
   status_char.begin();
 

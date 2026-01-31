@@ -20,7 +20,7 @@
       content="Web Bluetooth(BLE)로 텍스트 전송 → USB HID 키보드로 Target PC에 자동 타이핑(정확성 우선)."
     />
     <meta property="og:url" content="https://aidanpark.github.io/byteflusher/web/text.html" />
-    <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.svg" />
+    <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="ByteFlusher — Text Flush" />
@@ -28,7 +28,7 @@
       name="twitter:description"
       content="BLE(Web Bluetooth) → nRF52840 → USB HID keyboard. 정확성 우선 텍스트 자동 입력."
     />
-    <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.svg" />
+    <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
 
     <link rel="stylesheet" href="./style.css" />
   </head>
@@ -39,15 +39,27 @@
         <p class="muted" style="margin-top: 8px; font-size: 14px; line-height: 1.5;">
           <a href="../index.html" style="color: inherit;">Home</a>
           · <a href="./files.html" style="color: inherit;">File Flush</a>
+          · <a href="../docs/" style="color: inherit;">Docs</a>
           · <a href="https://github.com/AidanPark/byteflusher" rel="noopener" target="_blank" style="color: inherit;">GitHub</a>
-          · <a href="https://github.com/AidanPark/byteflusher#-빠른-시작-사용-방법" rel="noopener" target="_blank" style="color: inherit;">Usage/Docs</a>
+          · <a href="https://github.com/AidanPark/byteflusher#-빠른-시작-사용-방법" rel="noopener" target="_blank" style="color: inherit;">Usage</a>
         </p>
       </header>
 
       <div class="layout">
         <aside class="sidebar">
           <section class="card">
-            <h2 class="sidebarTitle">장치</h2>
+            <div class="cardHeaderRow">
+              <h2 class="sidebarTitle" style="margin: 0;">장치</h2>
+              <button
+                id="btnDeviceHelp"
+                class="helpIconButton"
+                type="button"
+                aria-label="장치 연결 도움말"
+                title="장치 연결 도움말"
+              >
+                ?
+              </button>
+            </div>
             <fieldset id="deviceFieldset">
               <div class="row">
                 <button id="btnConnect" class="primary">장치 연결</button>
@@ -61,17 +73,20 @@
           </section>
 
           <section class="card">
-            <h2 class="sidebarTitle">사용 범위 (중요)</h2>
+            <h2 class="sidebarTitle">주의사항</h2>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
               <li>본인 소유/관리 시스템 또는 명시적으로 허가받은 환경에서의 테스트/개발 자동화/데모 목적 사용을 전제로 합니다.</li>
               <li>무단 접근, 보안 우회, 비인가 입력 등 불법/비윤리적 목적으로 사용하지 마세요.</li>
+              <li>보안 설정에 따라, <b>최초 1회</b> OS Bluetooth 페어링/본딩 팝업이 뜰 수 있습니다.</li>
               <li>시작 전 Target PC의 입력 위치(포커스)를 반드시 확인하세요.</li>
             </ul>
           </section>
 
-          <section class="card">
+          <details class="card cardCollapsible" id="settingsCardText">
+            <summary class="cardSummary">
+              <span class="cardSummaryTitle">전송설정</span>
+            </summary>
             <fieldset id="settingsFieldset">
-              <h2 class="settingsTitle">전송설정</h2>
               <div class="grid2">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
                   청크 크기 (바이트)
@@ -162,7 +177,7 @@
                 <span id="textSettingsToast" class="muted small settingsToast" aria-live="polite"></span>
               </div>
             </fieldset>
-          </section>
+          </details>
 
           <section class="card">
             <h2 class="sidebarTitle">참고</h2>
@@ -193,7 +208,17 @@
             <label for="textInput" class="label">Flush Text</label>
             <textarea id="textInput" rows="28" placeholder="여기에 입력한 텍스트가 Target PC로 타이핑됩니다."></textarea>
 
-            <div id="jobMetrics" class="jobMetrics" aria-live="polite">
+            <div class="row" style="margin-top: 24px;">
+              <button id="btnStart" class="primary controlButton" disabled>Start (Text)</button>
+              <button id="btnPause" class="controlButton" disabled>Pause</button>
+              <button id="btnResume" class="controlButton" disabled>Resume</button>
+              <button id="btnStop" class="danger controlButton" disabled>Stop</button>
+            </div>
+
+            <div class="muted small" id="startHintText" style="margin-top: 8px;"></div>
+            <div class="muted small" id="startChecklistText" style="margin-top: 6px; white-space: pre-wrap;"></div>
+
+            <div id="jobMetrics" class="jobMetrics" aria-live="polite" style="margin-top: 10px;">
               <div class="jobLine">
                 <span class="jobKey">예상</span>
                 <span id="etaText" class="muted small">-</span>
@@ -201,6 +226,14 @@
               <div class="jobLine">
                 <span class="jobKey">시작</span>
                 <span id="startTimeText" class="muted small">-</span>
+              </div>
+              <div class="jobLine">
+                <span class="jobKey">바이트</span>
+                <span id="totalBytesText" class="muted small">-</span>
+              </div>
+              <div class="jobLine">
+                <span class="jobKey">단계</span>
+                <span id="stageText" class="muted small">-</span>
               </div>
               <div class="jobLine">
                 <span class="jobKey">경과</span>
@@ -219,22 +252,11 @@
                 <span id="estimateBasisText" class="muted small">-</span>
               </div>
             </div>
-
-            <div class="row" style="margin-top: 10px;">
-              <button id="btnStart" class="primary" disabled>Start</button>
-              <button id="btnPause" disabled>Pause</button>
-              <button id="btnResume" disabled>Resume</button>
-              <button id="btnStop" class="danger" disabled>Stop</button>
-            </div>
-          </section>
-
-          <section class="card" style="margin-top: 14px;">
-            <h2 class="sidebarTitle" style="margin-top: 0;">상태</h2>
-            <p class="muted small" style="margin-top: 6px;">(기능 구현은 이후 단계에서 연결합니다)</p>
           </section>
         </section>
       </div>
     </main>
+
     <script type="module" src="./text.js"></script>
   </body>
 </html>

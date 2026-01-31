@@ -20,7 +20,7 @@
       content="BLE 전송 → Windows PowerShell로 파일 생성(Base64 decode) + SHA-256 검증. 정확성 우선."
     />
     <meta property="og:url" content="https://aidanpark.github.io/byteflusher/web/files.html" />
-    <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_files_preview.svg" />
+    <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_files_preview.png" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="ByteFlusher — File Flush" />
@@ -28,7 +28,7 @@
       name="twitter:description"
       content="Windows PowerShell 기반 파일 생성/검증(Base64 decode + SHA-256). BLE(Web Bluetooth)로 전송."
     />
-    <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_files_preview.svg" />
+    <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_files_preview.png" />
 
     <link rel="stylesheet" href="./style.css" />
   </head>
@@ -39,15 +39,27 @@
         <p class="muted" style="margin-top: 8px; font-size: 14px; line-height: 1.5;">
           <a href="../index.html" style="color: inherit;">Home</a>
           · <a href="./text.html" style="color: inherit;">Text Flush</a>
+          · <a href="../docs/" style="color: inherit;">Docs</a>
           · <a href="https://github.com/AidanPark/byteflusher" rel="noopener" target="_blank" style="color: inherit;">GitHub</a>
-          · <a href="https://github.com/AidanPark/byteflusher#-빠른-시작-사용-방법" rel="noopener" target="_blank" style="color: inherit;">Usage/Docs</a>
+          · <a href="https://github.com/AidanPark/byteflusher#-빠른-시작-사용-방법" rel="noopener" target="_blank" style="color: inherit;">Usage</a>
         </p>
       </header>
 
       <div class="layout">
         <aside class="sidebar">
           <section class="card">
-            <h2 class="sidebarTitle">장치</h2>
+            <div class="cardHeaderRow">
+              <h2 class="sidebarTitle" style="margin: 0;">장치</h2>
+              <button
+                id="btnDeviceHelp"
+                class="helpIconButton"
+                type="button"
+                aria-label="장치 연결 도움말"
+                title="장치 연결 도움말"
+              >
+                ?
+              </button>
+            </div>
             <fieldset id="deviceFieldset">
               <div class="row">
                 <button id="btnConnect" class="primary">장치 연결</button>
@@ -61,10 +73,11 @@
           </section>
 
           <section class="card">
-            <h2 class="sidebarTitle">주의사항(중요)</h2>
+            <h2 class="sidebarTitle">주의사항</h2>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
               <li><b>허가된 환경 전용:</b> 본인 소유/관리 시스템 또는 명시적으로 허가받은 환경에서의 테스트/개발 자동화/데모 목적 사용을 전제로 합니다.</li>
               <li>무단 접근, 보안 우회, 비인가 파일 생성/입력 등 불법/비윤리적 목적으로 사용하지 마세요.</li>
+              <li>보안 설정에 따라, <b>최초 1회</b> OS Bluetooth 페어링/본딩 팝업이 뜰 수 있습니다.</li>
               <li>Target directory: 절대경로 / 영문(ASCII)만 / 공백 불가</li>
               <li>입력: 최상위 폴더 1개 또는 파일 1개</li>
               <li>내용: 바이트 그대로 보존(Base64 → WriteAllBytes)</li>
@@ -75,10 +88,11 @@
             </ul>
           </section>
 
-          <section class="card">
-            <h2 class="sidebarTitle">설정</h2>
+          <details class="card cardCollapsible" id="settingsCardFiles">
+            <summary class="cardSummary">
+              <span class="cardSummaryTitle">전송설정</span>
+            </summary>
             <fieldset id="settingsFieldset">
-              <h2 class="settingsTitle" style="margin-top: 0;">전송설정</h2>
               <div class="grid2">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
                   Key 입력 후 대기 (ms)
@@ -186,7 +200,7 @@
                 <span id="filesSettingsToast" class="muted small settingsToast" aria-live="polite"></span>
               </div>
             </fieldset>
-          </section>
+          </details>
 
           <section class="card">
             <h2 class="sidebarTitle">참고</h2>

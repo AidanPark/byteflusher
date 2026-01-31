@@ -35,30 +35,29 @@
   <body>
     <main class="container">
       <header class="topHeader">
-        <h1>🤖 Byte Flusher</h1>
-        <p class="muted" style="font-size: 16px; line-height: 1.5;">브라우저(Web Bluetooth)에서 Flusher에 BLE로 텍스트를 전송하면, Target PC에 USB 키보드(HID) 입력으로 정확하게 타이핑합니다.</p>
-      </header>
-
-      <section class="card" style="margin-top: 10px;">
-        <div class="row" style="justify-content: space-between;">
-          <div class="muted" style="font-size: 14px;">Internal links</div>
-          <div class="muted" style="font-size: 14px;">
-            <a href="./web/text.html" style="color: inherit;">Text</a>
+        <div class="topHeaderRow">
+          <h1 class="topHeaderTitle">🤖 Byte Flusher</h1>
+          <nav class="topHeaderNav muted" aria-label="Primary">
+            <a href="./web/text.html" style="color: inherit;">Text Flush</a>
             ·
-            <a href="./web/files.html" style="color: inherit;">Files</a>
+            <a href="./web/files.html" style="color: inherit;">File Flush</a>
+            ·
+            <a href="./docs/" style="color: inherit;">Docs</a>
             ·
             <a href="https://github.com/AidanPark/byteflusher" rel="noopener" target="_blank" style="color: inherit;">GitHub</a>
             ·
             <a href="https://github.com/AidanPark/byteflusher#-빠른-시작-사용-방법" rel="noopener" target="_blank" style="color: inherit;">Usage</a>
-          </div>
+          </nav>
         </div>
-      </section>
+        <p class="muted" style="padding-top: 26px; font-size: 16px; line-height: 1.5;">브라우저(Web Bluetooth)에서 Flusher에 BLE로 텍스트를 전송하면, Target PC에 USB 키보드(HID) 입력으로 정확하게 타이핑합니다.</p>
+      </header>
 
       <section class="card" style="margin-top: 10px;">
-        <h2 class="sidebarTitle" style="margin-bottom: 8px;">사용 범위 (중요)</h2>
+        <h2 class="sidebarTitle" style="margin-bottom: 8px;">주의사항 (중요)</h2>
         <ul class="muted" style="margin: 0; padding-left: 18px; font-size: 14px; line-height: 1.55;">
           <li>본인 소유/관리 시스템 또는 명시적으로 허가받은 환경에서의 테스트/개발 자동화/데모 목적 사용을 전제로 합니다.</li>
           <li>무단 접근, 보안 우회, 비인가 입력 등 불법/비윤리적 목적으로 사용하지 마세요.</li>
+          <li>보안 설정에 따라, <b>최초 1회</b> OS Bluetooth 페어링/본딩 팝업이 뜰 수 있습니다.</li>
           <li>키보드 입력 자동화 특성상 포커스 이동/팝업/UAC/알림에 의해 의도치 않은 위치에 입력될 수 있으니 테스트 환경에서 먼저 검증하세요.</li>
         </ul>
       </section>
@@ -72,12 +71,12 @@
       </section>
 
       <section style="margin-top: 18px; display: flex; justify-content: center;">
-        <div style="width: min(920px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px;">
-          <a href="./web/text.html" class="card" style="color: inherit; text-decoration: none; display: block; padding: 18px; text-align: center;">
+        <div style="width: min(920px, 100%); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 42px;">
+          <a href="./web/text.html" class="card" style="color: inherit; text-decoration: none; display: block; padding: 45px 18px; text-align: center;">
             <div style="font-size: 22px; font-weight: 700;">📄 텍스트 Flush</div>
             <div class="muted" style="margin-top: 10px; font-size: 16px;">텍스트를 BLE로 보내서 Target PC에 타이핑</div>
           </a>
-          <a href="./web/files.html" class="card" style="color: inherit; text-decoration: none; display: block; padding: 18px; text-align: center;">
+          <a href="./web/files.html" class="card" style="color: inherit; text-decoration: none; display: block; padding: 45px 18px; text-align: center;">
             <div style="font-size: 22px; font-weight: 700;">📁 파일 Flush</div>
             <div class="muted" style="margin-top: 10px; font-size: 16px;">PowerShell 스크립트로 파일 생성/검증 (Windows)</div>
           </a>

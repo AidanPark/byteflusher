@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ByteFlusher Docs — IME/레이아웃 입력 이슈(한글/영문)</title>
+    <meta
+      name="description"
+      content="USB HID 키보드 입력에서 한글/영문/IME, 키보드 레이아웃(US/KO) 차이로 발생하는 증상과 처방(모드 전환 딜레이, 레이아웃 고정, 테스트 세트)을 정리합니다."
+    />
+
+    <link rel="canonical" href="https://aidanpark.github.io/byteflusher/docs/ime-layout-issues.html" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="ByteFlusher" />
+    <meta property="og:title" content="ByteFlusher — IME/레이아웃 입력 이슈" />
+    <meta
+      property="og:description"
+      content="한글/영문/IME, US/KO 레이아웃 차이로 생기는 입력 깨짐/특수문자 불일치 증상과 처방." 
+    />
+    <meta property="og:url" content="https://aidanpark.github.io/byteflusher/docs/ime-layout-issues.html" />
+    <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ByteFlusher — IME/레이아웃 입력 이슈" />
+    <meta
+      name="twitter:description"
+      content="USB HID 입력에서 한글/영문/IME 및 키보드 레이아웃 이슈를 정리." 
+    />
+    <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
+
+    <link rel="stylesheet" href="../web/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="topHeader">
+        <h1>레이아웃/언어별 입력 이슈(한글/영문/IME 등)</h1>
+        <p class="muted" style="margin-top: 8px; font-size: 14px; line-height: 1.5;">
+          <a href="../index.html" style="color: inherit;">Home</a>
+          · <a href="./index.html" style="color: inherit;">Docs</a>
+          · <a href="../web/text.html" style="color: inherit;">Text Flush</a>
+        </p>
+      </header>
+
+      <section class="card" style="margin-top: 10px;">
+        <p class="muted" style="margin: 0; line-height: 1.7;">
+          USB HID 키보드 입력은 “문자”를 보내는 게 아니라 “키(키코드 + modifier)”를 보냅니다. 따라서 <b>언어/레이아웃/IME 상태</b>에 따라 결과 문자가 달라질 수 있습니다.
+        </p>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">Q. 왜 같은 키 입력인데 문자 결과가 달라지나요?</h2>
+        <p class="muted" style="line-height: 1.7;">
+          문자는 OS의 키보드 레이아웃과 IME가 결정합니다. 예를 들어 <b>Shift+2</b>가 `@`인지 다른 문자인지는 레이아웃에 따라 달라집니다.
+        </p>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">한/영 전환(IME 토글) 안정화 팁</h2>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li>시작 전 타깃 입력기를 가능한 한 <b>영문 상태</b>로 맞추고 시작</li>
+          <li>토글 키(예: Right Alt/CapsLock 등)는 환경마다 다름</li>
+          <li>토글 직후에는 <b>Mode Switch Delay</b>가 필요할 수 있음</li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">자주 발생하는 증상과 처방</h2>
+
+        <h3 class="settingsTitle" style="margin-top: 12px;">증상: 한글이 깨진다/중간이 섞인다</h3>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li><b>modeSwitchDelayMs</b> 증가</li>
+          <li><b>typingDelayMs</b> 증가(조합 안정화)</li>
+          <li>테스트는 메모장 → 성공 후 IDE로</li>
+        </ul>
+
+        <h3 class="settingsTitle" style="margin-top: 12px;">증상: 특수문자가 다른 문자로 찍힌다</h3>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li>Target PC의 키보드 레이아웃(US/KO) 확인 및 고정</li>
+          <li>테스트/운영 환경에서 동일 레이아웃 유지</li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">권장 입력 테스트 세트</h2>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li>ASCII: `ABC abc 123`, `[]{}()<>`, `!@#$%^&amp;*_-+=`</li>
+          <li>개행/탭: `line1\n\tindent\nline3`</li>
+          <li>한글: `한글 테스트: 가나다라마바사`, `abc한글def`</li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <p class="muted" style="margin: 0; font-size: 14px; line-height: 1.6;">
+          원본(Markdown):
+          <a href="https://github.com/AidanPark/byteflusher/blob/main/docs/ime-layout-issues.md" rel="noopener" target="_blank" style="color: inherit;">docs/ime-layout-issues.md</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

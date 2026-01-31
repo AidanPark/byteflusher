@@ -4,6 +4,8 @@
 // - Automation: Win+R -> PowerShell launch, then command typing via HID
 // - Bootstrap: launch PowerShell with -EncodedCommand (define helper functions), then send Base64 chunks
 
+import { wireDeviceHelpModal } from './device_help_modal.js';
+
 const SERVICE_UUID = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
 const FLUSH_TEXT_CHAR_UUID = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
 const CONFIG_CHAR_UUID = 'f3641402-00b0-4240-ba50-05ca45bf8abc';
@@ -1549,8 +1551,16 @@ function updateStartEnabled() {
 }
 
 function handleDisconnected() {
+  const wasRunning = running;
+  const wasPaused = paused;
   setUiRunState({ isRunning: false, isPaused: false });
-  setStatus('연결 끊김', 'BLE 연결이 끊어졌습니다. 다시 연결하세요.');
+  if (wasRunning && !stopRequested) {
+    // 전송(실행) 중 연결이 끊긴 경우에만 "연결 끊김"으로 표시한다.
+    // 유휴 상태에서는 항상 "연결 안 됨"을 유지한다.
+    setStatus('연결 끊김', wasPaused ? '일시정지 중 연결 끊김' : '전송 중 연결 끊김');
+  } else {
+    setStatus('연결 안 됨', '');
+  }
   device = null;
   server = null;
   flushChar = null;
@@ -1567,6 +1577,23 @@ function handleDisconnected() {
   updateStartEnabled();
 }
 
+function isLikelyPairingRequiredError(err) {
+  const name = (err?.name ?? '').toString();
+  const msg = (err?.message ?? String(err ?? '')).toString();
+  if (name === 'SecurityError') return true;
+  if (/insufficient\s+authentication|insufficient\s+encryption|authentication\s+required|encryption\s+required/i.test(msg)) return true;
+  if (/GATT\s+operation\s+not\s+permitted|not\s+permitted/i.test(msg)) return true;
+  return false;
+}
+
+function getPairingHelpText() {
+  return [
+    'BLE 보안(페어링/본딩)이 필요합니다.',
+    'Windows: 설정 → Bluetooth 및 디바이스에서 ByteFlusher를 페어링하세요.',
+    '페어링 후 다시 "장치 연결"을 눌러주세요.',
+  ].join(' ');
+}
+
 async function connect() {
   if (!navigator.bluetooth) {
     throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).');
@@ -1579,16 +1606,48 @@ async function connect() {
     optionalServices: [SERVICE_UUID],
   };
 
-  const d = await navigator.bluetooth.requestDevice(requestOptions);
+  let d;
+  try {
+    d = await navigator.bluetooth.requestDevice(requestOptions);
+  } catch (err) {
+    const name = (err?.name ?? '').toString();
+    if (name === 'NotFoundError') {
+      setStatus('연결 안 됨', '');
+      handleDisconnected();
+      return;
+    }
+    throw err;
+  }
   d.addEventListener('gattserverdisconnected', handleDisconnected);
 
-  setStatus('연결 중...', 'GATT 연결을 설정 중입니다.');
-  const s = await d.gatt.connect();
-  const service = await s.getPrimaryService(SERVICE_UUID);
-  const fc = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
-  const cc = await service.getCharacteristic(CONFIG_CHAR_UUID);
-  const sc = await service.getCharacteristic(STATUS_CHAR_UUID);
-  const mc = await service.getCharacteristic(MACRO_CHAR_UUID);
+  setStatus('연결 중...', d.name || '');
+  let s;
+  let service;
+  let fc;
+  let cc;
+  let sc;
+  let mc;
+  try {
+    s = await d.gatt.connect();
+    service = await s.getPrimaryService(SERVICE_UUID);
+    fc = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
+    cc = await service.getCharacteristic(CONFIG_CHAR_UUID);
+    sc = await service.getCharacteristic(STATUS_CHAR_UUID);
+    mc = await service.getCharacteristic(MACRO_CHAR_UUID);
+  } catch (err) {
+    if (isLikelyPairingRequiredError(err)) {
+      setStatus('페어링 필요', getPairingHelpText());
+      device = null;
+      server = null;
+      flushChar = null;
+      configChar = null;
+      statusChar = null;
+      macroChar = null;
+      updateStartEnabled();
+      return;
+    }
+    throw err;
+  }
 
   // Flow control status notifications
   sc.addEventListener('characteristicvaluechanged', (ev) => {
@@ -1614,7 +1673,7 @@ async function connect() {
   // Prime status values once.
   await readStatusOnce();
 
-  setStatus('연결됨', `${d.name || 'ByteFlusher'} (files)`);
+  setStatus('연결됨', `${d.name || 'ByteFlusher'} / ${SERVICE_UUID}`);
   setUiRunState({ isRunning: false, isPaused: false });
   updateStartEnabled();
 }
@@ -2055,6 +2114,7 @@ function init() {
   clearJobMetrics();
 
   wireEvents();
+  wireDeviceHelpModal({ variant: 'files' });
   updateStartEnabled();
 }
 

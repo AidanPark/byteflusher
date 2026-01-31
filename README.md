@@ -6,7 +6,7 @@
 
 **Quick links:** [Web UI (GitHub Pages)](https://aidanpark.github.io/byteflusher/) · [Text Flush UI](web/text.html) · [File Flush UI](web/files.html) · [Build/Flash](#-빠른-시작-사용-방법) · [How it works](#-개요) · [Troubleshooting](#-문제-해결)
 
-**Firmware Version:** 1.1.6
+**Firmware Version:** 1.1.7
 
 ## 🖥️ Web UI 미리보기
 
@@ -14,24 +14,19 @@
 
 [Text Flush UI](web/text.html)
 
-![Byte Flusher Text Flush UI preview (Web Bluetooth BLE to USB HID keyboard automatic typing)](docs/ui_text_preview.svg)
+![Byte Flusher Text Flush UI preview (Web Bluetooth BLE to USB HID keyboard automatic typing)](docs/ui_text_preview.png)
 
 [File Flush UI (Windows + PowerShell)](web/files.html)
 
-![Byte Flusher File Flush UI preview (Base64 over BLE, PowerShell decode, SHA-256 verify)](docs/ui_files_preview.svg)
+![Byte Flusher File Flush UI preview (Base64 over BLE, PowerShell decode, SHA-256 verify)](docs/ui_files_preview.png)
 
-## 📸 사용 보드 예시
+## 📚 문서(Q&A)
 
-아래 사진은 이 프로젝트를 실제로 테스트한 **Pro Micro 폼팩터 nRF52840 계열 보드** 예시입니다.
-
-![Example device (Pro Micro NRF52840)](docs/device_board.webp)
-
-브라우저(Web Bluetooth)에서 Flusher 보드(nRF52840)에 BLE로 텍스트를 전송하면,
-보드가 Target PC에 USB HID 키보드 입력으로 **정확하게 끝까지** 타이핑하는 프로젝트입니다.
-
-> 이 프로젝트의 최우선 목표는 **정확성**입니다. 속도는 부차적인 목표입니다.
-
----
+- Docs index (HTML): https://aidanpark.github.io/byteflusher/docs/
+- 정확성(Accuracy) 우선 설계/제약: [HTML](https://aidanpark.github.io/byteflusher/docs/accuracy-design.html) / [MD](docs/accuracy-design.md)
+- 텍스트 누락/깨짐 체크리스트: [HTML](https://aidanpark.github.io/byteflusher/docs/troubleshooting-missing-text.html) / [MD](docs/troubleshooting-missing-text.md)
+- IME/레이아웃(한글/영문) 이슈: [HTML](https://aidanpark.github.io/byteflusher/docs/ime-layout-issues.html) / [MD](docs/ime-layout-issues.md)
+- PlatformIO 빌드/업로드 문제 해결: [HTML](https://aidanpark.github.io/byteflusher/docs/platformio-build-upload.html) / [MD](docs/platformio-build-upload.md)
 
 ## ⚠️ 사용 범위 / 법적 고지 (중요)
 
@@ -42,14 +37,6 @@
 
 ---
 
-## 🔎 사람들이 이렇게 검색합니다 (의도/키워드)
-
-- “원격 PC에 텍스트를 정확히 입력” / “대량 텍스트 자동 입력” / “자동 타이핑 도구”
-- “USB HID 키보드 자동화” / “HID keyboard automation” / “automatic typing over HID”
-- “Web Bluetooth BLE 데이터 전송” / “BLE to USB HID bridge”
-- “파일을 복사 못 하는 환경에서 파일 생성” / “PowerShell로 Base64 디코드 저장”
-
----
 
 ## 📌 개요
 
@@ -115,6 +102,10 @@
 - Pro Micro 폼팩터의 nRF52840 보드 (알리에서 흔히 "nRF52840 Pro Micro" / "SuperMini nRF52840" 등으로 판매)
 - nice!nano v2 호환 계열
 - Adafruit Feather nRF52840 계열(개발/검증이 쉬움)
+
+예시(실제 테스트 보드):
+
+![Example device (Pro Micro NRF52840)](docs/device_board.webp)
 
 ### PlatformIO 환경과 보드 설정
 
@@ -251,7 +242,7 @@ Web Bluetooth는 보안 컨텍스트가 필요하므로 `file://` 로 열면 정
 
 추가 팁
 - 동일한 보드가 여러 대라면, 선택 목록에서 `ByteFlusher-XXXX` 형태의 이름으로 구분합니다(XXXX는 보드 고유값 기반).
-- 연결 후 상태 표시줄에 `id=...`가 함께 표시되어, 같은 이름이어도 구분에 도움이 됩니다.
+- 연결 후 상태 표시줄은 `${deviceName} / ${SERVICE_UUID}` 형식으로 표시됩니다.
 
 ---
 

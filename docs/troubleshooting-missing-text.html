@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ByteFlusher Docs — 텍스트 누락/깨짐 체크리스트</title>
+    <meta
+      name="description"
+      content="Target PC에서 텍스트가 누락/깨질 때의 체크리스트: 포커스, 타이핑 딜레이, IME, 앱 자동기능(IDE/터미널) 관점에서 빠르게 원인을 분리합니다."
+    />
+
+    <link rel="canonical" href="https://aidanpark.github.io/byteflusher/docs/troubleshooting-missing-text.html" />
+
+    <meta property="og:type" content="article" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="ByteFlusher" />
+    <meta property="og:title" content="ByteFlusher — 텍스트 누락/깨짐 체크리스트" />
+    <meta
+      property="og:description"
+      content="포커스/딜레이/IME/앱 자동기능 4축으로 누락/깨짐 원인을 빠르게 분리하는 체크리스트."
+    />
+    <meta property="og:url" content="https://aidanpark.github.io/byteflusher/docs/troubleshooting-missing-text.html" />
+    <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ByteFlusher — 텍스트 누락/깨짐 체크리스트" />
+    <meta
+      name="twitter:description"
+      content="Target PC 입력 누락/깨짐을 포커스/딜레이/IME/앱 자동기능 관점에서 진단."
+    />
+    <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
+
+    <link rel="stylesheet" href="../web/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <header class="topHeader">
+        <h1>타겟 PC에서 텍스트가 누락/깨질 때 체크리스트</h1>
+        <p class="muted" style="margin-top: 8px; font-size: 14px; line-height: 1.5;">
+          <a href="../index.html" style="color: inherit;">Home</a>
+          · <a href="./index.html" style="color: inherit;">Docs</a>
+          · <a href="../web/text.html" style="color: inherit;">Text Flush</a>
+          · <a href="../web/files.html" style="color: inherit;">File Flush</a>
+        </p>
+      </header>
+
+      <section class="card" style="margin-top: 10px;">
+        <p class="muted" style="margin: 0; line-height: 1.7;">
+          증상은 다양하지만, 원인은 보통 <b>포커스</b>, <b>타이핑 속도(타이밍)</b>, <b>IME/입력기</b>, <b>앱 자동기능</b> 4개 축으로 수렴합니다.
+          아래 순서대로 체크하면 빠르게 원인을 분리할 수 있습니다.
+        </p>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">0) 먼저 “전송 문제 vs 입력 문제” 분리</h2>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li><b>전송 문제(웹→BLE)</b>: 연결 끊김/재전송/진행률 멈춤</li>
+          <li><b>입력 문제(USB HID→Target PC)</b>: 전송은 끝났는데 결과 텍스트가 누락/깨짐</li>
+        </ul>
+        <p class="muted" style="margin-top: 10px; line-height: 1.7;">대부분은 “입력 문제”입니다.</p>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">1) 포커스/환경 체크 (가장 흔함)</h2>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li>Start 직전에 Target PC의 입력 위치(커서)를 다시 확인</li>
+          <li>실행 중 마우스/키보드를 건드리지 않기</li>
+          <li>알림/팝업/업데이트/백신 알림 최소화</li>
+          <li>화면 보호기/절전/자동 잠금 OFF</li>
+          <li>RDP/VM에서는 누락이 더 흔함 → 딜레이를 크게</li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">2) 타이핑 속도(딜레이) 조정</h2>
+
+        <h3 class="settingsTitle" style="margin-top: 12px;">Q. 글자가 가끔씩 빠진다(누락)</h3>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li><b>typingDelayMs</b>를 먼저 올립니다 (예: 30 → 60 → 100)</li>
+          <li>그래도 안 되면 <b>keyPressDelayMs</b>도 올립니다 (예: 10 → 20)</li>
+        </ul>
+
+        <h3 class="settingsTitle" style="margin-top: 12px;">Q. 엔터/탭/특수키 주변에서 깨진다</h3>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li><b>keyPressDelayMs</b>를 올려 “눌림 유지”를 늘립니다.</li>
+          <li>콘솔(터미널)이라면 <b>typingDelayMs</b>도 함께 올립니다.</li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">3) 앱 자동 기능 제거(IDE/에디터 영향)</h2>
+        <p class="muted" style="line-height: 1.7;">자동 완성/자동 들여쓰기/자동 포맷은 입력 변형을 만들 수 있습니다.</p>
+        <ol class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li>메모장/단순 에디터에서 100% 성공 확인</li>
+          <li>IDE로 옮긴 뒤 자동기능을 하나씩 끄면서 비교</li>
+        </ol>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <h2 class="sidebarTitle">4) IME(한글/한영 전환) 이슈</h2>
+        <ul class="muted" style="margin: 0; padding-left: 18px; line-height: 1.7;">
+          <li>시작 전에 Target PC 입력기를 <b>영문 상태</b>로 맞춥니다.</li>
+          <li>한/영 전환키가 환경과 맞는지 확인합니다.</li>
+          <li><b>modeSwitchDelayMs</b>를 늘려 토글 직후 안정화 시간을 줍니다.</li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-top: 10px;">
+        <p class="muted" style="margin: 0; font-size: 14px; line-height: 1.6;">
+          원본(Markdown):
+          <a href="https://github.com/AidanPark/byteflusher/blob/main/docs/troubleshooting-missing-text.md" rel="noopener" target="_blank" style="color: inherit;">docs/troubleshooting-missing-text.md</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
