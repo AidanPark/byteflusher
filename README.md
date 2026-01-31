@@ -1,6 +1,12 @@
 # 🤖⌨️ Byte Flusher (BLE → USB HID)
 
-**Firmware Version:** 1.1.0
+**Firmware Version:** 1.1.4
+
+## 🧩 사용 보드 예시
+
+아래 사진은 이 프로젝트를 실제로 테스트한 **Pro Micro 폼팩터 nRF52840 계열 보드** 예시입니다.
+
+![Example device (Pro Micro NRF52840)](docs/device_board.webp)
 
 브라우저(Web Bluetooth)에서 Flusher 보드(nRF52840)에 BLE로 텍스트를 전송하면,
 보드가 Target PC에 USB HID 키보드 입력으로 **정확하게 끝까지** 타이핑하는 프로젝트입니다.

@@ -4,7 +4,7 @@
 #include <bluefruit.h>
 
 // 펌웨어 버전 (메이저.마이너.패치)
-static const char* kFirmwareVersion = "1.1.0";
+static const char* kFirmwareVersion = "1.1.4";
 
 static const char* build_ble_device_name() {
   // 동일 기기가 여러 대일 때, 광고 이름만으로도 구분 가능하게 한다.
@@ -938,6 +938,19 @@ void setup() {
 }
 
 void loop() {
+  // Serial monitor can attach after boot (especially when there is no reset button).
+  // Some monitors don't assert DTR, so avoid relying on `if (Serial)`.
+  // Print FW periodically for a limited window so users can confirm version reliably.
+  static uint32_t fw_window_started_ms = 0;
+  static uint32_t fw_last_print_ms = 0;
+  const uint32_t now_ms = millis();
+  if (fw_window_started_ms == 0) fw_window_started_ms = now_ms;
+  if ((now_ms - fw_window_started_ms) < 300000u && (now_ms - fw_last_print_ms) >= 5000u) {
+    fw_last_print_ms = now_ms;
+    Serial.print("FW: ");
+    Serial.println(kFirmwareVersion);
+  }
+
   // USB HID가 준비되지 않은 상태에서 입력을 소비하면(버퍼 pop) 타이핑이 누락될 수 있다.
   // 따라서 HID가 준비될 때까지는 RX 버퍼를 유지하며 대기한다.
   if (!hid_ready()) {
