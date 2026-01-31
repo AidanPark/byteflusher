@@ -1,12 +1,17 @@
 # 🤖⌨️ Byte Flusher (BLE → USB HID)
 
-**한 줄 요약:** Web Bluetooth(BLE)로 텍스트/파일을 보내면 nRF52840 보드가 USB HID 키보드로 Target PC에 **정확하게 끝까지** 입력하는 *automatic typing / text flusher* 프로젝트입니다.
+ByteFlusher는 Web Bluetooth(BLE)로 텍스트/파일을 전송하면, nRF52840 보드가 USB HID 키보드 입력으로 Target PC에 **정확하게 끝까지** 타이핑/생성하는 도구입니다.
 
-**Keywords:** automatic typing, USB HID keyboard, Web Bluetooth, BLE, nRF52840, PlatformIO, text flusher, file flusher, PowerShell
+## 🔗 Links
 
-**Quick links:** [Web UI (GitHub Pages)](https://aidanpark.github.io/byteflusher/) · [Text Flush UI](web/text.html) · [File Flush UI](web/files.html) · [Build/Flash](#-빠른-시작-사용-방법) · [How it works](#-개요) · [Troubleshooting](#-문제-해결)
+- Web UI (GitHub Pages): https://aidanpark.github.io/byteflusher/
+- Text Flush UI: [web/text.html](web/text.html)
+- File Flush UI: [web/files.html](web/files.html)
+- Build/Flash: [빠른 시작](#-빠른-시작-사용-방법)
+- How it works: [개요](#-개요)
+- Troubleshooting: [문제 해결](#-문제-해결)
 
-**Firmware Version:** 1.1.7
+Firmware version: **1.1.7**
 
 ## 🖥️ Web UI 미리보기
 
@@ -14,7 +19,7 @@
 
 ![Byte Flusher Text Flush UI preview (Web Bluetooth BLE to USB HID keyboard automatic typing)](docs/ui_text_preview.png)
 
-[File Flush UI (Windows + PowerShell)](web/files.html)
+[File Flush UI](web/files.html)
 
 ![Byte Flusher File Flush UI preview (Base64 over BLE, PowerShell decode, SHA-256 verify)](docs/ui_files_preview.png)
 
