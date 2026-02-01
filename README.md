@@ -11,7 +11,7 @@ ByteFlusher는 Web Bluetooth(BLE)로 텍스트/파일을 전송하면, nRF52840 
 - How it works: [개요](#-개요)
 - Troubleshooting: [문제 해결](#-문제-해결)
 
-Firmware version: **1.1.7**
+Firmware version: **1.1.11**
 
 ## 🖥️ Web UI 미리보기
 
@@ -205,6 +205,35 @@ Web Bluetooth는 보안 컨텍스트가 필요하므로 `file://` 로 열면 정
 - 브라우저에서 접속
 	- `http://localhost:8080/`
 
+### 2-1) 모바일에서 사용하기(Control PC를 폰으로)
+
+이 프로젝트의 웹 UI는 기본적으로 **Web Bluetooth** 기반입니다.
+
+#### Android (권장)
+
+- Android Chrome/Edge는 Web Bluetooth를 지원하는 편이라, 폰을 Control PC로 쓰기 쉽습니다.
+- 연결이 안 되면:
+	- 블루투스 권한/근처 기기(스캔) 권한 허용
+	- 페이지가 `https://` 인지 확인(GitHub Pages는 OK)
+	- 다른 탭/기기에서 이미 같은 장치에 연결 중인지 확인
+
+#### iPhone / iOS (Safari/Chrome는 기본적으로 불가)
+
+- iOS의 Safari/Chrome는 같은 WebKit 엔진이라, 일반적으로 Web Bluetooth가 동작하지 않습니다.
+- 대안: iOS에서 Web BLE 브릿지를 제공하는 서드파티 앱을 사용합니다.
+	- 검증된 앱: **BLE Link - Web BLE Browser**
+		- App Store: https://apps.apple.com/kr/app/ble-link-web-ble-browser/id6468414672
+
+iOS에서 연결 절차(예시):
+1. 위 앱 설치
+2. iOS 설정에서 해당 앱의 Bluetooth 권한 허용
+3. 앱 안에서 https://aidanpark.github.io/byteflusher/ 접속
+4. [장치 연결] → `ByteFlusher-XXXX` 선택
+
+주의(정확성/안정성):
+- iOS는 백그라운드 전환/화면 꺼짐 시 BLE가 끊길 수 있어, **앱을 전면 유지 + 화면 켜둔 채**로 진행 권장
+- File Flusher는 파일 선택/브라우저 메모리/권한 정책 영향이 커서, 모바일에서는 **Text Flusher 위주**로 먼저 검증 권장
+
 ### 3) 실제 사용 흐름
 
 #### A) Text Flusher (텍스트 Flush)
@@ -344,6 +373,15 @@ Web Bluetooth는 보안 컨텍스트가 필요하므로 `file://` 로 열면 정
 - Target PC에서 자동완성/자동 들여쓰기/자동 괄호닫기 기능이 강한 IDE는 충돌 가능성이 큽니다.
 	- 메모장/간단한 텍스트 에디터에서 먼저 검증 권장
 - 보드 설정에서 Typing Delay / Mode Switch Delay를 늘려보세요.
+
+### (File Flusher) PowerShell 명령이 깨짐 (`e-Host` 같은 오타)
+- 증상 예: `Write-Host ...`가 `e-Host ...`처럼 **앞부분이 누락**되어 실행 오류
+- 원인: PowerShell 창이 뜨는 타이밍/포커스/초기화 과정에서 **첫 몇 글자가 드랍**되는 케이스
+- 대응: File Flusher 설정에서 아래 값을 올려 안정성을 확보하세요.
+	- `psLaunchDelayMs` (예: 2200~3500)
+	- `runDialogDelayMs` (예: 350~600)
+	- `bootstrapDelayMs` (예: 600~1200)
+	- `keyDelayMs` (최소 15 이상 권장)
 
 ### Pause/Stop이 즉시 반응하지 않음
 - 펌웨어가 최신인지 확인하세요([src/main.cpp](src/main.cpp) 의 `kFirmwareVersion` 참고)

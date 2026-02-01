@@ -119,9 +119,11 @@ const kDefaultFilesSettings = Object.freeze({
   overwritePolicy: 'fail', // 'fail' | 'overwrite' | 'backup'
 
   // Automation / bootstrap
-  runDialogDelayMs: 250,
-  psLaunchDelayMs: 1200,
-  bootstrapDelayMs: 200,
+  // NOTE: The first keystrokes after launching a console window are the most likely to drop.
+  // Prefer conservative defaults; users can tune down if their environment is stable.
+  runDialogDelayMs: 350,
+  psLaunchDelayMs: 2200,
+  bootstrapDelayMs: 600,
   diagLog: true,
 });
 
@@ -1231,7 +1233,8 @@ function estimateTotalWorkLines({ files, cfg, targetDir, tempB64Path, runToken, 
 
 function estimateTotalWorkMs({ files, cfg, targetDir, tempB64Path, runToken, overwritePolicy, diagLog }) {
   const c = cfg || {};
-  const perCharMs = Math.max(0, Number(c.keyDelayMs) || 0) * 3; // keyPress*2 + typingDelay
+  const effectiveKeyDelayMs = Math.max(15, Number(c.keyDelayMs) || 0);
+  const perCharMs = effectiveKeyDelayMs * 3; // keyPress*2 + typingDelay
 
   const normalPrefixChars = kPsLineGuardPrefix.length;
   const strongPrefixChars = kPsLineGuardPrefixStrong.length;
@@ -1259,11 +1262,14 @@ function estimateTotalWorkMs({ files, cfg, targetDir, tempB64Path, runToken, ove
   ms += runCmd.length * perCharMs;
   ms += Math.max(0, Number(c.psLaunchDelayMs) || 0);
 
-  // Extra settle time (same clamp as code)
-  ms += Math.max(200, Math.min(2000, Number(c.commandDelayMs) || 0));
+  // Extra settle time (mirrors code)
+  ms += Math.max(600, Math.min(2500, Math.floor(Number(c.psLaunchDelayMs) / 2) || 0));
 
   // Warmup lines + BF_READY
-  const warmDelay = Math.max(Number(c.lineDelayMs) || 0, Number(c.commandDelayMs) || 0);
+  const warmDelay = Math.max(Number(c.lineDelayMs) || 0, Number(c.commandDelayMs) || 0, 120);
+  ms += lineCostMs('', warmDelay);
+  ms += lineCostMs('', warmDelay);
+  ms += lineCostMs('', warmDelay);
   ms += lineCostMs('', warmDelay);
   ms += lineCostMs('', warmDelay);
   ms += lineCostMs('', warmDelay);
@@ -1756,10 +1762,13 @@ async function startRun() {
 
     // Configure device delays for accuracy.
     const toggleKeyId = toggleKeyStringToId(getToggleKeySetting());
+    // File flusher is extremely sensitive to missed keystrokes.
+    // Clamp to a small minimum even if UI settings are too aggressive.
+    const effectiveKeyDelayMs = Math.max(15, Number(cfg.keyDelayMs) || 0);
     await writeDeviceConfig({
-      typingDelayMs: cfg.keyDelayMs,
-      modeSwitchDelayMs: cfg.keyDelayMs,
-      keyPressDelayMs: cfg.keyDelayMs,
+      typingDelayMs: effectiveKeyDelayMs,
+      modeSwitchDelayMs: effectiveKeyDelayMs,
+      keyPressDelayMs: effectiveKeyDelayMs,
       toggleKeyId,
       pausedFlag: false,
       abortFlag: false,
@@ -1782,15 +1791,15 @@ async function startRun() {
     await macroEnter();
     await sleep(cfg.psLaunchDelayMs);
 
-    // Extra settle time: the first few keystrokes are the most likely to drop
-    // while the console window is still finishing focus / initialization.
-    await sleep(Math.max(200, Math.min(2000, cfg.commandDelayMs)));
+    // Extra settle time: after the console becomes visible, focus/initialization can still
+    // steal the first few characters. Use a delay related to launch wait, not commandDelay.
+    await sleep(Math.max(600, Math.min(2500, Math.floor(Number(cfg.psLaunchDelayMs) / 2) || 0)));
     const tx = createBleTextTx();
 
     // Warm up the console prompt: send a few empty lines first.
     // This helps when the first line tends to lose leading characters.
-    const warmDelay = Math.max(cfg.lineDelayMs, cfg.commandDelayMs);
-    for (let i = 0; i < 3; i += 1) {
+    const warmDelay = Math.max(cfg.lineDelayMs, cfg.commandDelayMs, 120);
+    for (let i = 0; i < 6; i += 1) {
       if (stopRequested) break;
       while (paused && !stopRequested) await sleep(120);
       if (stopRequested) break;
