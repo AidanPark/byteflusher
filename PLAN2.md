@@ -102,6 +102,25 @@
 ## 실행 시퀀스(개념 단계)
 > Windows 기준이며, 정확성 때문에 “PowerShell을 자동으로 열고 실행”까지 포함한다.
 
+### 느린 Target PC(중요): PowerShell 창이 뜨기 전 입력 유실
+
+Target PC 성능이 낮으면 Win+R로 PowerShell을 띄운 직후 첫 입력들이 창이 완전히 준비되기 전에 전송되어,
+일부 키 입력이 유실/오입력될 수 있다.
+
+대응(정확성 우선):
+- **충분히 큰 대기값**을 기본으로 두고, 환경이 안정적인 경우에만 줄인다.
+- 타이밍 파라미터를 분리해 조절한다.
+   - `runDialogDelayMs`: Win+R 후 실행창이 뜰 때까지 대기
+   - `psLaunchDelayMs`: PowerShell 실행 후 첫 명령을 치기 전까지 대기(가장 중요)
+   - `bootstrapDelayMs`: 런처/헬퍼 설치 후 다음 단계로 넘어가기 전 대기
+
+권장 초기값(느린 PC 기준 가이드):
+- `psLaunchDelayMs`: 6000~15000ms
+- 필요하면 20000ms까지 상향
+
+폴백(추가 안전장치):
+- 자동 실행 대신, 사용자가 PowerShell을 미리 열고 커서를 맞춘 뒤 Start하는 “수동 모드”를 제공하면 입력 유실 위험이 크게 줄어든다.
+
 1. 터미널 열기
    - 결정(구현): Macro Characteristic으로 Win+R → `powershell -NoProfile -ExecutionPolicy Bypass` → Enter
    - (정확성 주의) UAC/포커스/키보드 레이아웃에 따라 실패할 수 있으므로, 실행 시작 전 사용자 안내가 필요

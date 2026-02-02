@@ -121,9 +121,9 @@ const kDefaultFilesSettings = Object.freeze({
   // Automation / bootstrap
   // NOTE: The first keystrokes after launching a console window are the most likely to drop.
   // Prefer conservative defaults; users can tune down if their environment is stable.
-  runDialogDelayMs: 350,
-  psLaunchDelayMs: 2200,
-  bootstrapDelayMs: 600,
+  runDialogDelayMs: 450,
+  psLaunchDelayMs: 6000,
+  bootstrapDelayMs: 1200,
   diagLog: true,
 });
 
@@ -469,9 +469,9 @@ function getFilesSettingsFromUi() {
     chunkDelayMs: clampInt(els.chunkDelayMsFiles?.value, 0, 2000, kDefaultFilesSettings.chunkDelayMs),
     overwritePolicy: String(els.overwritePolicyFiles?.value || kDefaultFilesSettings.overwritePolicy),
 
-    runDialogDelayMs: clampInt(els.runDialogDelayMsFiles?.value, 100, 2000, kDefaultFilesSettings.runDialogDelayMs),
-    psLaunchDelayMs: clampInt(els.psLaunchDelayMsFiles?.value, 1200, 8000, kDefaultFilesSettings.psLaunchDelayMs),
-    bootstrapDelayMs: clampInt(els.bootstrapDelayMsFiles?.value, 200, 3000, kDefaultFilesSettings.bootstrapDelayMs),
+    runDialogDelayMs: clampInt(els.runDialogDelayMsFiles?.value, 100, 4000, kDefaultFilesSettings.runDialogDelayMs),
+    psLaunchDelayMs: clampInt(els.psLaunchDelayMsFiles?.value, 1200, 20000, kDefaultFilesSettings.psLaunchDelayMs),
+    bootstrapDelayMs: clampInt(els.bootstrapDelayMsFiles?.value, 200, 10000, kDefaultFilesSettings.bootstrapDelayMs),
     diagLog: Boolean(els.diagLogFiles?.checked),
   };
 }
@@ -508,8 +508,8 @@ function loadFilesSettings() {
       migrated.overwritePolicy = String(migrated.overwritePolicy || kDefaultFilesSettings.overwritePolicy);
 
       migrated.runDialogDelayMs = clampInt(migrated.runDialogDelayMs, 100, 2000, kDefaultFilesSettings.runDialogDelayMs);
-      migrated.psLaunchDelayMs = clampInt(migrated.psLaunchDelayMs, 1200, 8000, kDefaultFilesSettings.psLaunchDelayMs);
-      migrated.bootstrapDelayMs = clampInt(migrated.bootstrapDelayMs, 200, 3000, kDefaultFilesSettings.bootstrapDelayMs);
+      migrated.psLaunchDelayMs = clampInt(migrated.psLaunchDelayMs, 1200, 20000, kDefaultFilesSettings.psLaunchDelayMs);
+      migrated.bootstrapDelayMs = clampInt(migrated.bootstrapDelayMs, 200, 10000, kDefaultFilesSettings.bootstrapDelayMs);
       migrated.diagLog = Boolean(migrated.diagLog);
 
       try {

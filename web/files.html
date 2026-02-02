@@ -163,7 +163,7 @@
               <div class="grid2" style="margin-top: 12px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
                   Run(Win+R) 열기 후 대기 (ms)
-                  <input id="runDialogDelayMsFiles" type="number" min="100" max="2000" step="10" value="250" />
+                  <input id="runDialogDelayMsFiles" type="number" min="100" max="4000" step="10" value="350" />
                 </label>
                 <p class="muted small" style="margin: -2px 0 0;">
                   Win+R 입력 후 Run 창이 완전히 포커스를 잡을 때까지 기다립니다.
@@ -171,7 +171,7 @@
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
                   PowerShell 실행 후 대기 (ms)
-                  <input id="psLaunchDelayMsFiles" type="number" min="1200" max="8000" step="50" value="1200" />
+                  <input id="psLaunchDelayMsFiles" type="number" min="1200" max="20000" step="50" value="6000" />
                 </label>
                 <p class="muted small" style="margin: -2px 0 0;">
                   PowerShell이 뜨고 프롬프트가 입력 가능한 상태가 될 때까지 기다립니다.
@@ -179,7 +179,7 @@
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
                   부트스트랩 후 대기 (ms)
-                  <input id="bootstrapDelayMsFiles" type="number" min="200" max="3000" step="10" value="200" />
+                  <input id="bootstrapDelayMsFiles" type="number" min="200" max="10000" step="10" value="800" />
                 </label>
                 <p class="muted small" style="margin: -2px 0 0;">
                   부트스트랩 스크립트 초기화 후 다음 명령으로 넘어가기 전 안정화 대기입니다.
