@@ -6,23 +6,14 @@
 
 import { wireDeviceHelpModal } from './device_help_modal.js';
 
-// Secure (encrypted; may require OS pairing)
-const SERVICE_UUID_SECURE = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
-const FLUSH_TEXT_CHAR_UUID_SECURE = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
-const CONFIG_CHAR_UUID_SECURE = 'f3641402-00b0-4240-ba50-05ca45bf8abc';
-const STATUS_CHAR_UUID_SECURE = 'f3641403-00b0-4240-ba50-05ca45bf8abc';
-const MACRO_CHAR_UUID_SECURE = 'f3641404-00b0-4240-ba50-05ca45bf8abc';
-const KEY_LOG_CHAR_UUID_SECURE = 'f3641405-00b0-4240-ba50-05ca45bf8abc';
-
-// Open (no OS pairing; browser-only)
-const SERVICE_UUID_OPEN = 'f3641500-00b0-4240-ba50-05ca45bf8abc';
-const FLUSH_TEXT_CHAR_UUID_OPEN = 'f3641501-00b0-4240-ba50-05ca45bf8abc';
-const CONFIG_CHAR_UUID_OPEN = 'f3641502-00b0-4240-ba50-05ca45bf8abc';
-const STATUS_CHAR_UUID_OPEN = 'f3641503-00b0-4240-ba50-05ca45bf8abc';
-const MACRO_CHAR_UUID_OPEN = 'f3641504-00b0-4240-ba50-05ca45bf8abc';
-const KEY_LOG_CHAR_UUID_OPEN = 'f3641505-00b0-4240-ba50-05ca45bf8abc';
-
-const LS_SECURE_MODE = 'byteflusher.secureMode';
+// BLE UUIDs must match firmware(src/main.cpp)
+// 연결 방식은 기존(보안 서비스 UUID) 1개만 사용한다.
+const SERVICE_UUID = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
+const FLUSH_TEXT_CHAR_UUID = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
+const CONFIG_CHAR_UUID = 'f3641402-00b0-4240-ba50-05ca45bf8abc';
+const STATUS_CHAR_UUID = 'f3641403-00b0-4240-ba50-05ca45bf8abc';
+const MACRO_CHAR_UUID = 'f3641404-00b0-4240-ba50-05ca45bf8abc';
+const KEY_LOG_CHAR_UUID = 'f3641405-00b0-4240-ba50-05ca45bf8abc';
 
 // Shared localStorage keys (same meaning as text flusher)
 const LS_TYPING_DELAY_MS = 'byteflusher.typingDelayMs';
@@ -38,7 +29,6 @@ const DEFAULT_TOGGLE_KEY = 'rightAlt';
 const els = {
   btnConnect: document.getElementById('btnConnect'),
   btnDisconnect: document.getElementById('btnDisconnect'),
-  secureMode: document.getElementById('secureMode'),
   statusText: document.getElementById('statusText'),
   detailsText: document.getElementById('detailsText'),
   deviceFieldset: document.getElementById('deviceFieldset'),
@@ -99,62 +89,6 @@ let configChar = null;
 let statusChar = null;
 let macroChar = null;
 let keyLogChar = null;
-
-function getSecureModeEnabled() {
-  // default: insecure (browser-only)
-  if (els.secureMode instanceof HTMLInputElement) {
-    return Boolean(els.secureMode.checked);
-  }
-  const raw = localStorage.getItem(LS_SECURE_MODE);
-  return raw === '1' || raw === 'true';
-}
-
-function setSecureModeEnabled(v) {
-  const on = Boolean(v);
-  localStorage.setItem(LS_SECURE_MODE, on ? '1' : '0');
-  if (els.secureMode instanceof HTMLInputElement) {
-    els.secureMode.checked = on;
-  }
-}
-
-function updateDeviceHelpVisibility() {
-  const btn = document.getElementById('btnDeviceHelp');
-  if (!(btn instanceof HTMLElement)) return;
-  const visible = getSecureModeEnabled();
-  btn.style.visibility = visible ? 'visible' : 'hidden';
-  btn.style.pointerEvents = visible ? 'auto' : 'none';
-  if (btn instanceof HTMLButtonElement) {
-    btn.disabled = !visible;
-    if (!visible) {
-      btn.setAttribute('aria-hidden', 'true');
-    } else {
-      btn.removeAttribute('aria-hidden');
-    }
-  }
-}
-
-function getBleUuidsForMode() {
-  const secure = getSecureModeEnabled();
-  return secure
-    ? {
-        secure,
-        service: SERVICE_UUID_SECURE,
-        flush: FLUSH_TEXT_CHAR_UUID_SECURE,
-        config: CONFIG_CHAR_UUID_SECURE,
-        status: STATUS_CHAR_UUID_SECURE,
-        macro: MACRO_CHAR_UUID_SECURE,
-        keylog: KEY_LOG_CHAR_UUID_SECURE,
-      }
-    : {
-        secure,
-        service: SERVICE_UUID_OPEN,
-        flush: FLUSH_TEXT_CHAR_UUID_OPEN,
-        config: CONFIG_CHAR_UUID_OPEN,
-        status: STATUS_CHAR_UUID_OPEN,
-        macro: MACRO_CHAR_UUID_OPEN,
-        keylog: KEY_LOG_CHAR_UUID_OPEN,
-      };
-}
 
 let deviceBufCapacity = null;
 let deviceBufFree = null;
@@ -1773,12 +1707,11 @@ async function connect() {
     throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).');
   }
 
-  const uuids = getBleUuidsForMode();
   setStatus('장치 선택 중...', 'BLE 장치 선택 팝업을 확인하세요.');
 
   const requestOptions = {
-    filters: [{ services: [uuids.service] }, { namePrefix: 'ByteFlusher' }],
-    optionalServices: [SERVICE_UUID_SECURE, SERVICE_UUID_OPEN],
+    filters: [{ services: [SERVICE_UUID] }, { namePrefix: 'ByteFlusher' }],
+    optionalServices: [SERVICE_UUID],
   };
 
   let d;
@@ -1805,25 +1738,21 @@ async function connect() {
   let kc;
   try {
     s = await d.gatt.connect();
-    service = await s.getPrimaryService(uuids.service);
-    fc = await service.getCharacteristic(uuids.flush);
-    cc = await service.getCharacteristic(uuids.config);
-    sc = await service.getCharacteristic(uuids.status);
-    mc = await service.getCharacteristic(uuids.macro);
+    service = await s.getPrimaryService(SERVICE_UUID);
+    fc = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
+    cc = await service.getCharacteristic(CONFIG_CHAR_UUID);
+    sc = await service.getCharacteristic(STATUS_CHAR_UUID);
+    mc = await service.getCharacteristic(MACRO_CHAR_UUID);
 
     // Optional (firmware may not support older builds)
     try {
-      kc = await service.getCharacteristic(uuids.keylog);
+      kc = await service.getCharacteristic(KEY_LOG_CHAR_UUID);
     } catch {
       kc = null;
     }
   } catch (err) {
     if (isLikelyPairingRequiredError(err)) {
-      if (uuids.secure) {
-        setStatus('페어링 필요', getPairingHelpText());
-      } else {
-        setStatus('연결 실패', '보안 오류가 발생했습니다. "보안 연결" 옵션을 켜고 OS 페어링 후 다시 시도하세요.');
-      }
+      setStatus('페어링 필요', getPairingHelpText());
       device = null;
       server = null;
       flushChar = null;
@@ -1831,7 +1760,7 @@ async function connect() {
       statusChar = null;
       macroChar = null;
       keyLogChar = null;
-      setKeyLogStatus(uuids.secure ? '페어링 필요' : '연결 실패');
+      setKeyLogStatus('페어링 필요');
       updateStartEnabled();
       return;
     }
@@ -1881,7 +1810,7 @@ async function connect() {
   // Prime status values once.
   await readStatusOnce();
 
-  setStatus('연결됨', `${d.name || 'ByteFlusher'} / ${uuids.service}`);
+  setStatus('연결됨', `${d.name || 'ByteFlusher'} / ${SERVICE_UUID}`);
   setUiRunState({ isRunning: false, isPaused: false });
   updateStartEnabled();
 }
@@ -2239,17 +2168,6 @@ function wireEvents() {
     });
   }
 
-  if (els.secureMode instanceof HTMLInputElement) {
-    els.secureMode.addEventListener('change', () => {
-      setSecureModeEnabled(els.secureMode.checked);
-      clearKeyLog();
-      updateDeviceHelpVisibility();
-      if (device?.gatt?.connected) {
-        setStatus('설정 변경됨', '보안 연결 옵션이 변경되었습니다. 재연결하세요.');
-      }
-    });
-  }
-
   if (els.btnPickFile && els.fileInput) {
     els.btnPickFile.addEventListener('click', () => {
       if (running) return;
@@ -2330,11 +2248,6 @@ function init() {
   const cfg = loadFilesSettings();
   applyFilesSettingsToUi(cfg);
   saveFilesSettings(cfg);
-
-  // Default: insecure (browser-only)
-  const rawSecure = localStorage.getItem(LS_SECURE_MODE);
-  setSecureModeEnabled(rawSecure === '1' || rawSecure === 'true');
-  updateDeviceHelpVisibility();
 
   setStatus('연결 안 됨', '');
   setUiRunState({ isRunning: false, isPaused: false });

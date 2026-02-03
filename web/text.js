@@ -6,21 +6,12 @@
 import { wireDeviceHelpModal } from './device_help_modal.js';
 
 // BLE UUIDs must match firmware(src/main.cpp)
-// Secure (encrypted; may require OS pairing)
-const SERVICE_UUID_SECURE = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
-const FLUSH_TEXT_CHAR_UUID_SECURE = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
-const CONFIG_CHAR_UUID_SECURE = 'f3641402-00b0-4240-ba50-05ca45bf8abc';
-const STATUS_CHAR_UUID_SECURE = 'f3641403-00b0-4240-ba50-05ca45bf8abc';
-const KEY_LOG_CHAR_UUID_SECURE = 'f3641405-00b0-4240-ba50-05ca45bf8abc';
-
-// Open (no OS pairing; browser-only)
-const SERVICE_UUID_OPEN = 'f3641500-00b0-4240-ba50-05ca45bf8abc';
-const FLUSH_TEXT_CHAR_UUID_OPEN = 'f3641501-00b0-4240-ba50-05ca45bf8abc';
-const CONFIG_CHAR_UUID_OPEN = 'f3641502-00b0-4240-ba50-05ca45bf8abc';
-const STATUS_CHAR_UUID_OPEN = 'f3641503-00b0-4240-ba50-05ca45bf8abc';
-const KEY_LOG_CHAR_UUID_OPEN = 'f3641505-00b0-4240-ba50-05ca45bf8abc';
-
-const LS_SECURE_MODE = 'byteflusher.secureMode';
+// 연결 방식은 기존(보안 서비스 UUID) 1개만 사용한다.
+const SERVICE_UUID = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
+const FLUSH_TEXT_CHAR_UUID = 'f3641401-00b0-4240-ba50-05ca45bf8abc';
+const CONFIG_CHAR_UUID = 'f3641402-00b0-4240-ba50-05ca45bf8abc';
+const STATUS_CHAR_UUID = 'f3641403-00b0-4240-ba50-05ca45bf8abc';
+const KEY_LOG_CHAR_UUID = 'f3641405-00b0-4240-ba50-05ca45bf8abc';
 
 // Flush Text 패킷 포맷(LE): [sessionId(2)][seq(2)][payload...]
 const FLUSH_HEADER_SIZE = 4;
@@ -48,7 +39,6 @@ const DEFAULT_IGNORE_LEADING_WHITESPACE = false;
 const els = {
   btnConnect: document.getElementById('btnConnect'),
   btnDisconnect: document.getElementById('btnDisconnect'),
-  secureMode: document.getElementById('secureMode'),
   btnStart: document.getElementById('btnStart'),
   btnPause: document.getElementById('btnPause'),
   btnResume: document.getElementById('btnResume'),
@@ -190,62 +180,6 @@ let flushChar = null;
 let configChar = null;
 let statusChar = null;
 let keyLogChar = null;
-
-let activeBleUuids = null;
-
-function getSecureModeEnabled() {
-  // default: insecure (browser-only)
-  if (els.secureMode instanceof HTMLInputElement) {
-    return Boolean(els.secureMode.checked);
-  }
-  const raw = localStorage.getItem(LS_SECURE_MODE);
-  return raw === '1' || raw === 'true';
-}
-
-function setSecureModeEnabled(v) {
-  const on = Boolean(v);
-  localStorage.setItem(LS_SECURE_MODE, on ? '1' : '0');
-  if (els.secureMode instanceof HTMLInputElement) {
-    els.secureMode.checked = on;
-  }
-}
-
-function updateDeviceHelpVisibility() {
-  const btn = document.getElementById('btnDeviceHelp');
-  if (!(btn instanceof HTMLElement)) return;
-  const visible = getSecureModeEnabled();
-  btn.style.visibility = visible ? 'visible' : 'hidden';
-  btn.style.pointerEvents = visible ? 'auto' : 'none';
-  if (btn instanceof HTMLButtonElement) {
-    btn.disabled = !visible;
-    if (!visible) {
-      btn.setAttribute('aria-hidden', 'true');
-    } else {
-      btn.removeAttribute('aria-hidden');
-    }
-  }
-}
-
-function getBleUuidsForMode() {
-  const secure = getSecureModeEnabled();
-  return secure
-    ? {
-        secure,
-        service: SERVICE_UUID_SECURE,
-        flush: FLUSH_TEXT_CHAR_UUID_SECURE,
-        config: CONFIG_CHAR_UUID_SECURE,
-        status: STATUS_CHAR_UUID_SECURE,
-        keylog: KEY_LOG_CHAR_UUID_SECURE,
-      }
-    : {
-        secure,
-        service: SERVICE_UUID_OPEN,
-        flush: FLUSH_TEXT_CHAR_UUID_OPEN,
-        config: CONFIG_CHAR_UUID_OPEN,
-        status: STATUS_CHAR_UUID_OPEN,
-        keylog: KEY_LOG_CHAR_UUID_OPEN,
-      };
-}
 
 let deviceBufCapacity = null;
 let deviceBufFree = null;
@@ -854,16 +788,14 @@ async function connect() {
     throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).');
   }
 
-  activeBleUuids = getBleUuidsForMode();
-
   setStatus('장치 선택 중...', 'BLE 장치 선택 팝업을 확인하세요.');
 
   const requestOptions = {
     // 동일한 BLE 장치가 많이 잡히는 환경에서 선택을 쉽게 한다.
     // - 펌웨어는 "ByteFlusher-XXXX" 형태로 광고 이름을 내보낸다.
     // - 서비스 UUID 필터로 다른 장치를 최대한 숨긴다.
-    filters: [{ services: [activeBleUuids.service] }, { namePrefix: 'ByteFlusher' }],
-    optionalServices: [SERVICE_UUID_SECURE, SERVICE_UUID_OPEN],
+    filters: [{ services: [SERVICE_UUID] }, { namePrefix: 'ByteFlusher' }],
+    optionalServices: [SERVICE_UUID],
   };
 
   try {
@@ -908,30 +840,26 @@ async function connect() {
   try {
     server = await device.gatt.connect();
 
-    service = await server.getPrimaryService(activeBleUuids.service);
-    flushChar = await service.getCharacteristic(activeBleUuids.flush);
+    service = await server.getPrimaryService(SERVICE_UUID);
+    flushChar = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
   } catch (err) {
     if (isLikelyPairingRequiredError(err)) {
-      if (activeBleUuids.secure) {
-        setStatus('페어링 필요', getPairingHelpText());
-      } else {
-        setStatus('연결 실패', '보안 오류가 발생했습니다. "보안 연결" 옵션을 켜고 OS 페어링 후 다시 시도하세요.');
-      }
+      setStatus('페어링 필요', getPairingHelpText());
       setUiConnected(false);
       updateStartEnabled();
-      setKeyLogStatus(activeBleUuids.secure ? '페어링 필요' : '연결 실패');
+      setKeyLogStatus('페어링 필요');
       return;
     }
     throw err;
   }
   try {
-    configChar = await service.getCharacteristic(activeBleUuids.config);
+    configChar = await service.getCharacteristic(CONFIG_CHAR_UUID);
   } catch {
     configChar = null;
   }
 
   try {
-    statusChar = await service.getCharacteristic(activeBleUuids.status);
+    statusChar = await service.getCharacteristic(STATUS_CHAR_UUID);
     statusChar.addEventListener('characteristicvaluechanged', (ev) => {
       handleStatusValue(ev?.target?.value);
     });
@@ -943,7 +871,7 @@ async function connect() {
 
   // Optional: KeyLog notify (firmware may not support older builds)
   try {
-    keyLogChar = await service.getCharacteristic(activeBleUuids.keylog);
+    keyLogChar = await service.getCharacteristic(KEY_LOG_CHAR_UUID);
     keyLogChar.addEventListener('characteristicvaluechanged', (ev) => {
       try {
         handleKeyLogValue(ev?.target?.value);
@@ -958,17 +886,13 @@ async function connect() {
     setKeyLogStatus('키보드 로그: 미지원(펌웨어 업데이트 필요)');
   }
 
-  setStatus('연결됨', `${device.name ?? 'ByteFlusher'} / ${activeBleUuids.service}`);
+  setStatus('연결됨', `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
   setUiConnected(true);
 }
 
 async function reconnectLoop() {
   if (!device) {
     throw new Error('장치가 선택되지 않았습니다.');
-  }
-
-  if (!activeBleUuids) {
-    activeBleUuids = getBleUuidsForMode();
   }
 
   let attempt = 0;
@@ -984,16 +908,15 @@ async function reconnectLoop() {
       }
 
       const service = await server.getPrimaryService(SERVICE_UUID);
-      const primary = await server.getPrimaryService(activeBleUuids.service);
-      flushChar = await primary.getCharacteristic(activeBleUuids.flush);
+      flushChar = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
       try {
-        configChar = await primary.getCharacteristic(activeBleUuids.config);
+        configChar = await service.getCharacteristic(CONFIG_CHAR_UUID);
       } catch {
         configChar = null;
       }
 
       try {
-        statusChar = await primary.getCharacteristic(activeBleUuids.status);
+        statusChar = await service.getCharacteristic(STATUS_CHAR_UUID);
         statusChar.addEventListener('characteristicvaluechanged', (ev) => {
           handleStatusValue(ev?.target?.value);
         });
@@ -1004,7 +927,7 @@ async function reconnectLoop() {
       }
 
       try {
-        keyLogChar = await primary.getCharacteristic(activeBleUuids.keylog);
+        keyLogChar = await service.getCharacteristic(KEY_LOG_CHAR_UUID);
         keyLogChar.addEventListener('characteristicvaluechanged', (ev) => {
           try {
             handleKeyLogValue(ev?.target?.value);
