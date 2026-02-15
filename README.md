@@ -1,19 +1,26 @@
 # 🤖⌨️ Byte Flusher (BLE → USB HID)
 
-ByteFlusher는 Web Bluetooth(BLE)로 텍스트/파일을 전송하면, nRF52840 보드가 USB HID 키보드 입력으로 Target PC에 **정확하게 끝까지** 타이핑/생성하는 도구입니다.
+![nRF52840](https://img.shields.io/badge/nRF52840-required-blue)
+![Web Bluetooth](https://img.shields.io/badge/Web_Bluetooth-Chrome%2FEdge-4285F4)
+![PlatformIO](https://img.shields.io/badge/PlatformIO-Arduino-orange)
+![Android](https://img.shields.io/badge/Android-supported-green)
+![iOS](https://img.shields.io/badge/iOS-via_BLE_Link_app-yellow)
+![GitHub stars](https://img.shields.io/github/stars/AidanPark/byteflusher?style=social)
+
+ByteFlusher is a tool that receives text/files via Web Bluetooth (BLE) and uses an nRF52840 board to **accurately type/create them to completion** on a Target PC as USB HID keyboard input.
 
 ## 🔗 Links
 
 - Web UI (GitHub Pages): https://aidanpark.github.io/byteflusher/
 - Text Flush UI: [web/text.html](web/text.html)
 - File Flush UI: [web/files.html](web/files.html)
-- Build/Flash: [빠른 시작](#-빠른-시작-사용-방법)
-- How it works: [개요](#-개요)
-- Troubleshooting: [문제 해결](#-문제-해결)
+- Build/Flash: [Quick Start](#-quick-start)
+- How it works: [Overview](#-overview)
+- Troubleshooting: [Troubleshooting](#-troubleshooting)
 
 Firmware version: **1.1.34**
 
-## 🖥️ Web UI 미리보기
+## 🖥️ Web UI Preview
 
 [Text Flush UI](web/text.html)
 
@@ -23,30 +30,30 @@ Firmware version: **1.1.34**
 
 ![Byte Flusher File Flush UI preview (Base64 over BLE, PowerShell decode, SHA-256 verify)](docs/ui_files_preview.png)
 
-## 📚 문서(Q&A)
+## 📚 Documentation (Q&A)
 
 - Docs index (HTML): https://aidanpark.github.io/byteflusher/docs/
-- 정확성(Accuracy) 우선 설계/제약: [HTML](https://aidanpark.github.io/byteflusher/docs/accuracy-design.html) / [MD](docs/accuracy-design.md)
-- 텍스트 누락/깨짐 체크리스트: [HTML](https://aidanpark.github.io/byteflusher/docs/troubleshooting-missing-text.html) / [MD](docs/troubleshooting-missing-text.md)
-- IME/레이아웃(한글/영문) 이슈: [HTML](https://aidanpark.github.io/byteflusher/docs/ime-layout-issues.html) / [MD](docs/ime-layout-issues.md)
-- PlatformIO 빌드/업로드 문제 해결: [HTML](https://aidanpark.github.io/byteflusher/docs/platformio-build-upload.html) / [MD](docs/platformio-build-upload.md)
-- Target PC에서 COM 포트 없이(HID-only) 사용하기: [HTML](https://aidanpark.github.io/byteflusher/docs/hid-only-target-build.html) / [MD](docs/hid-only-target-build.md)
+- Accuracy-first design/constraints: [HTML](https://aidanpark.github.io/byteflusher/docs/accuracy-design.html) / [MD](docs/accuracy-design.md)
+- Missing/corrupted text checklist: [HTML](https://aidanpark.github.io/byteflusher/docs/troubleshooting-missing-text.html) / [MD](docs/troubleshooting-missing-text.md)
+- IME/layout (Korean/English) issues: [HTML](https://aidanpark.github.io/byteflusher/docs/ime-layout-issues.html) / [MD](docs/ime-layout-issues.md)
+- PlatformIO build/upload troubleshooting: [HTML](https://aidanpark.github.io/byteflusher/docs/platformio-build-upload.html) / [MD](docs/platformio-build-upload.md)
+- Using HID-only (no COM port) on Target PC: [HTML](https://aidanpark.github.io/byteflusher/docs/hid-only-target-build.html) / [MD](docs/hid-only-target-build.md)
 
-## ⚠️ 사용 범위 / 법적 고지 (중요)
+## ⚠️ Scope of Use / Legal Disclaimer (Important)
 
-- 이 프로젝트는 **본인 소유/관리 시스템** 또는 **명시적으로 허가받은 환경**에서의 테스트/개발 자동화/데모 목적 사용을 전제로 합니다.
-- 무단 접근, 보안 우회, 계정/권한 탈취, 타인 시스템에 대한 비인가 입력 등 **불법/비윤리적 목적**으로 사용하지 마세요.
-- USB HID 키보드 입력은 “사람이 타이핑하는 것”처럼 동작하므로, 포커스 이동/팝업/UAC/알림 등에 의해 **의도치 않은 위치에 입력**될 수 있습니다. 반드시 안전한 테스트 환경에서 검증 후 사용하세요.
-- 이 도구의 사용 및 사용 결과(데이터 손실/오입력/업무 영향 등)에 대한 책임은 사용자에게 있습니다.
+- This project is intended for use in **testing, development automation, and demos** on **systems you own/manage** or in **explicitly authorized environments**.
+- Do not use this tool for **illegal or unethical purposes** such as unauthorized access, security bypass, credential/privilege theft, or unauthorized input to others' systems.
+- USB HID keyboard input behaves like "a person typing," so focus changes, popups, UAC prompts, or notifications may cause **input to go to unintended locations**. Always test in a safe environment before actual use.
+- The user assumes all responsibility for the use of this tool and its outcomes (data loss, mistyped input, workflow impact, etc.).
 
 ---
 
 
-## 📌 개요
+## 📌 Overview
 
-- Control PC: Chrome/Edge 브라우저로 Flusher에 BLE 연결하여 제어
-- Flusher: nRF52840 기반 보드(USB Device + BLE). BLE로 받은 데이터를 버퍼링하고 USB HID 키보드로 출력
-- Target PC: Flusher가 USB 키보드로 입력을 수행하는 대상
+- Control PC: Controls the Flusher via BLE connection using a Chrome/Edge browser
+- Flusher: An nRF52840-based board (USB Device + BLE). Buffers data received over BLE and outputs it as USB HID keyboard input
+- Target PC: The machine where the Flusher performs keyboard input via USB
 
 ```
 [ Control PC (Chrome/Edge) ]
@@ -60,336 +67,336 @@ Firmware version: **1.1.34**
 
 ---
 
-## ✅ 주요 기능
+## ✅ Key Features
 
-- ✅ **Text Flusher(텍스트 Flush)**
-	- 브라우저에서 입력한 텍스트를 Target PC로 정확하게 타이핑
-	- 한글 음절(가~힣) + ASCII(영문/숫자/기호/개행/탭)
+- ✅ **Text Flusher**
+	- Accurately types text entered in the browser onto the Target PC
+	- Supports Korean syllables (가~힣) + ASCII (letters/numbers/symbols/newlines/tabs)
+	- IME toggle supports **Korean/English switching only** (other language pairs are not supported)
 
-- ✅ **File Flusher(파일/폴더 Flush, Windows 전용)**
-	- Control PC(브라우저)에서 파일/폴더를 선택하면, Target PC에 동일한 파일을 생성
-	- 구현 방식: Base64(ASCII) 전송 → Target PC의 PowerShell에서 디코드하여 바이트 그대로 저장 → SHA-256 검증
-	- 이미지/zip/exe 같은 바이너리 파일도 가능(종류 제한보다 “전송 시간/포커스 안정성”이 제한 요소)
+- ✅ **File Flusher (Windows only)**
+	- Select files/folders from the Control PC (browser) to create identical files on the Target PC
+	- How it works: Base64 (ASCII) transmission → PowerShell on Target PC decodes and saves the raw bytes → SHA-256 verification
+	- Supports binary files like images/zip/exe (transfer time and focus stability are the limiting factors, not file type)
 
-- ✅ **정확성 우선 전송(공통)**
-	- BLE `Write with response` + 재연결/재시도 + 중복 방지(sessionId/seq)
-	- Flow Control: 디바이스 RX 버퍼 여유를 Status(READ+NOTIFY)로 받아 웹이 전송 속도 자동 조절
-	- Pause/Resume: Pause 시 디바이스가 즉시 타이핑을 멈춤(큐는 유지)
-	- Stop: 디바이스 RX 큐를 즉시 비우고 내부 상태를 리셋(남은 입력 폐기)
-
----
-
-## 🎯 사용 사례
-
-- 긴 코드/스크립트/설정값을 Target PC에 **"타이핑"으로 정확히 입력**해야 할 때
-- 네트워크/클립보드/파일 전송이 제한된 환경에서, **텍스트를 안전하게 주입**해야 할 때
-- 데모/교육/테스트에서 동일한 텍스트를 **반복 입력(재현성)** 해야 할 때
-- (Windows) 파일을 직접 복사하기 어려운 상황에서, **PowerShell로 파일을 생성/검증**해야 할 때
-
-사람들이 실제로 검색하는 문장 예시:
-- "원격 PC에 텍스트를 정확히 입력하는 방법"
-- "USB HID 키보드로 대량 텍스트 자동 타이핑"
-- "Web Bluetooth BLE로 텍스트 전송해서 PC에 입력"
+- ✅ **Accuracy-first transmission (common)**
+	- BLE `Write with response` + reconnection/retry + deduplication (sessionId/seq)
+	- Flow Control: Web UI automatically adjusts transmission speed based on device RX buffer availability reported via Status (READ+NOTIFY)
+	- Pause/Resume: Device immediately stops typing on Pause (queue is preserved)
+	- Stop: Immediately clears the device RX queue and resets internal state (remaining input is discarded)
 
 ---
 
-## 🧩 지원 보드 / 구매 가이드 (중요)
+## 🎯 Use Cases
 
-### 필수 조건
+- When you need to **accurately "type" long code/scripts/config** onto a Target PC
+- When you need to **safely inject text** in environments where network/clipboard/file transfer is restricted
+- When you need **repeatable input (reproducibility)** for demos, training, or testing
+- (Windows) When you need to **create and verify files via PowerShell** in situations where direct file copying is difficult
 
-- **MCU가 nRF52840** 이어야 합니다.
-	- BLE(2.4GHz) + **Native USB Device**가 동시에 필요합니다.
-	- nRF52832 등(USB 없는 칩)은 대상이 아닙니다.
+Example search queries people actually use:
+- "How to accurately type text on a remote PC"
+- "Automated bulk text typing via USB HID keyboard"
+- "Send text via Web Bluetooth BLE and type it on PC"
 
-### 추천/확인된 호환 계열
+---
 
-- Pro Micro 폼팩터의 nRF52840 보드 (알리에서 흔히 "nRF52840 Pro Micro" / "SuperMini nRF52840" 등으로 판매)
-- nice!nano v2 호환 계열
-- Adafruit Feather nRF52840 계열(개발/검증이 쉬움)
+## 🧩 Supported Boards / Buying Guide (Important)
 
-예시(실제 테스트 보드):
+### Requirements
+
+- **MCU must be nRF52840**.
+	- Both BLE (2.4GHz) and **Native USB Device** are required simultaneously.
+	- Chips without USB (e.g., nRF52832) are not supported.
+
+### Recommended/Verified Compatible Boards
+
+- Pro Micro form factor nRF52840 boards (commonly sold on AliExpress as "nRF52840 Pro Micro" / "SuperMini nRF52840")
+- nice!nano v2 compatible boards
+- Adafruit Feather nRF52840 series (easiest for development/testing)
+
+Example (actual test board):
 
 ![Example device (Pro Micro NRF52840)](docs/device_board.webp)
 
-### PlatformIO 환경과 보드 설정
+### PlatformIO Environment and Board Configuration
 
-이 저장소는 PlatformIO `nordicnrf52` 플랫폼을 사용합니다.
+This repository uses the PlatformIO `nordicnrf52` platform.
 
-- 기본 빌드 환경은 [platformio.ini](platformio.ini) 의 `nice_nano_v2_compatible` 입니다.
-	- `board = adafruit_feather_nrf52840` 로 빌드하도록 되어 있습니다.
-	- 일부 "nice!nano v2 호환" 보드는 PlatformIO에 보드 ID가 없어서,
-		**부트로더/VID-PID가 Feather 계열과 유사한 경우** 이렇게 우회하는 구성이 실사용에 유리했습니다.
+- The default build environment is `nice_nano_v2_compatible` in [platformio.ini](platformio.ini).
+	- It is configured to build with `board = adafruit_feather_nrf52840`.
+	- Some "nice!nano v2 compatible" boards don't have a PlatformIO board ID, so
+		**when the bootloader/VID-PID is similar to the Feather series**, this workaround configuration has proven practical.
 
-다른 보드를 쓴다면,
-1) VS Code PlatformIO 확장 → Boards에서 보드 ID 검색
-2) [platformio.ini](platformio.ini) 에 새 env를 만들고 `board = ...`만 바꿔서 빌드/업로드하세요.
+If using a different board:
+1) VS Code PlatformIO extension → search for the board ID in Boards
+2) Create a new env in [platformio.ini](platformio.ini) and change only `board = ...` to build/upload.
 
-예시 후보(보드에 따라 다름):
+Example candidates (varies by board):
 - `adafruit_feather_nrf52840`
 - `adafruit_itsybitsy_nrf52840`
 - `seeed_xiao_nrf52840`
 
-### 업로드 팁
+### Upload Tips
 
-- 다수의 nRF52 보드는 **RESET 더블탭**으로 부트로더 모드 진입합니다.
-- 부트로더 진입 시 COM 포트가 바뀌는 경우가 많습니다.
+- Most nRF52 boards enter bootloader mode via a **double-tap RESET**.
+- The COM port often changes when entering bootloader mode.
 
-### Windows에서 "이 보드가 맞는지" 확인(체크리스트)
+### Verifying "Is This the Right Board?" on Windows (Checklist)
 
-알리/호환 보드는 판매 페이지 설명이 부정확한 경우가 많아서,
-Windows에서 **칩/부트로더 계열을 빠르게 판별**하는 방법을 권장합니다.
+AliExpress/compatible board listings are often inaccurate, so we recommend **quickly identifying the chip/bootloader family** on Windows.
 
-1) **장치 관리자** 열기
-- Win+X → 장치 관리자
+1) **Open Device Manager**
+- Win+X → Device Manager
 
-2) 보드를 USB로 연결한 상태에서 아래 항목을 확인
-- "포트(COM 및 LPT)"에 새 COM 포트가 생기는지
-- "범용 직렬 버스 장치"에 새 장치가 잡히는지
+2) With the board connected via USB, check the following
+- Whether a new COM port appears under "Ports (COM & LPT)"
+- Whether a new device appears under "Universal Serial Bus devices"
 
-3) (가능하면) **부트로더 모드**로 진입해서 한 번 더 확인
-- 보드 RESET을 빠르게 2번(더블탭)
-- 부트로더 모드에서는 **COM 포트/장치명이 바뀌는 경우**가 흔합니다.
+3) (If possible) **Enter bootloader mode** and check again
+- Double-tap the board RESET quickly
+- In bootloader mode, **the COM port/device name often changes**.
 
-4) VID/PID(하드웨어 ID) 확인
-- 장치 우클릭 → 속성 → "자세히" 탭 → "하드웨어 ID"
-- `VID_xxxx` / `PID_yyyy` 값을 확인합니다.
+4) Check VID/PID (Hardware ID)
+- Right-click device → Properties → "Details" tab → "Hardware Ids"
+- Note the `VID_xxxx` / `PID_yyyy` values.
 
-참고(대표 예시):
-- Adafruit nRF52 계열(Feather 등)은 제조사 VID(예: `239A`)로 잡히는 경우가 많습니다.
-- "nice!nano v2 호환" 보드 중 일부는 Feather 계열과 비슷한 VID/PID 및 부트로더 동작을 보여,
-  PlatformIO에서 `adafruit_feather_nrf52840` 보드 정의로 빌드/업로드가 잘 되는 케이스가 있었습니다.
+Reference (typical examples):
+- Adafruit nRF52 series (Feather, etc.) often appears with the manufacturer VID (e.g., `239A`).
+- Some "nice!nano v2 compatible" boards show similar VID/PID and bootloader behavior to the Feather series,
+  allowing successful build/upload using the `adafruit_feather_nrf52840` board definition in PlatformIO.
 
-5) UF2 드라이브가 뜨는지 확인(선택)
-- 보드가 UF2 부트로더를 사용하면, 부트로더 모드에서 USB 드라이브가 나타나는 경우가 있습니다.
-- 드라이브가 뜨는지 여부는 보드/부트로더 종류를 추정하는 단서가 됩니다.
+5) Check if a UF2 drive appears (optional)
+- If the board uses a UF2 bootloader, a USB drive may appear in bootloader mode.
+- Whether or not a drive appears is a clue for identifying the board/bootloader type.
 
-#### PowerShell로 VID/PID 빠르게 보기(옵션)
+#### Quickly Viewing VID/PID via PowerShell (Optional)
 
-장치 관리자 UI 대신, PowerShell로도 힌트를 얻을 수 있습니다.
+Instead of the Device Manager UI, you can also get hints via PowerShell.
 
-- 연결된 USB 장치 중에서 VID/PID 패턴이 있는 항목만 보기
+- View only USB devices with VID/PID patterns
 	- `Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match 'VID_[0-9A-F]{4}&PID_[0-9A-F]{4}' } | Select-Object -First 50 -Property Status,Class,FriendlyName,InstanceId`
 
-- 특정 VID(예: 239A)로 필터링하기
+- Filter by a specific VID (e.g., 239A)
 	- `Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match 'VID_239A' } | Format-Table -AutoSize Status,Class,FriendlyName,InstanceId`
 
-> 환경에 따라 FriendlyName/InstanceId 표시가 다를 수 있습니다. 그래도 `VID_XXXX&PID_YYYY`가 보이면 큰 단서가 됩니다.
+> FriendlyName/InstanceId display may vary by environment. Even so, if you see `VID_XXXX&PID_YYYY`, it's a strong clue.
 
-> 위 체크리스트는 "정확한 식별"을 보장하진 않지만,
-> 최소한 nRF52840 + USB Device + 적절한 부트로더 계열인지 빠르게 거르는 데 도움됩니다.
+> This checklist doesn't guarantee "exact identification," but
+> it helps quickly filter whether a board is nRF52840 + USB Device + appropriate bootloader family.
 
 ---
 
-## 🚀 빠른 시작 (사용 방법)
+## 🚀 Quick Start
 
-### 1) 펌웨어 빌드/업로드
+### 1) Build/Upload Firmware
 
-- 빌드:
+- Build:
 	- `platformio run --environment nice_nano_v2_compatible`
-- 업로드:
+- Upload:
 	- `platformio run --target upload --environment nice_nano_v2_compatible`
 
-### 2) 웹 UI 실행(필수: HTTPS 또는 localhost)
+### 2) Run the Web UI (Requires HTTPS or localhost)
 
-가장 간단한 방법(권장):
+Easiest method (recommended):
 
-- GitHub Pages 컨트롤 페이지로 접속
+- Access the GitHub Pages control page
 	- https://aidanpark.github.io/byteflusher/
-	- 여기에서 Flusher에 연결하고 Start/Pause/Resume/Stop을 제어합니다.
+	- Connect to the Flusher and control Start/Pause/Resume/Stop from here.
 
-Web Bluetooth는 보안 컨텍스트가 필요하므로 `file://` 로 열면 정상 동작하지 않습니다.
+Web Bluetooth requires a secure context, so opening via `file://` will not work.
 
-간단한 방법(로컬):
+Simple method (local):
 
-- PowerShell에서 프로젝트 루트에서 실행
+- Run from the project root in PowerShell
 	- `python -m http.server 8080`
-- 브라우저에서 접속
+- Access in browser
 	- `http://localhost:8080/`
 
-### 2-1) 모바일에서 사용하기(Control PC를 폰으로)
+### 2-1) Using on Mobile (Phone as Control PC)
 
-이 프로젝트의 웹 UI는 기본적으로 **Web Bluetooth** 기반입니다.
+This project's Web UI is based on **Web Bluetooth**.
 
-#### Android (권장)
+#### Android (Recommended)
 
-- Android Chrome/Edge는 Web Bluetooth를 지원하는 편이라, 폰을 Control PC로 쓰기 쉽습니다.
-- 연결이 안 되면:
-	- 블루투스 권한/근처 기기(스캔) 권한 허용
-	- 페이지가 `https://` 인지 확인(GitHub Pages는 OK)
-	- 다른 탭/기기에서 이미 같은 장치에 연결 중인지 확인
+- Android Chrome/Edge supports Web Bluetooth, making it easy to use your phone as the Control PC.
+- If connection fails:
+	- Grant Bluetooth and nearby device (scan) permissions
+	- Ensure the page is served over `https://` (GitHub Pages is fine)
+	- Check if another tab/device is already connected to the same device
 
-#### iPhone / iOS (Safari/Chrome는 기본적으로 불가)
+#### iPhone / iOS (Safari/Chrome Not Supported by Default)
 
-- iOS의 Safari/Chrome는 같은 WebKit 엔진이라, 일반적으로 Web Bluetooth가 동작하지 않습니다.
-- 대안: iOS에서 Web BLE 브릿지를 제공하는 서드파티 앱을 사용합니다.
-	- 검증된 앱: **BLE Link - Web BLE Browser**
+- Safari/Chrome on iOS use the same WebKit engine, so Web Bluetooth generally does not work.
+- Alternative: Use a third-party app that provides a Web BLE bridge on iOS.
+	- Verified app: **BLE Link - Web BLE Browser**
 		- App Store: https://apps.apple.com/kr/app/ble-link-web-ble-browser/id6468414672
 
-iOS에서 연결 절차(예시):
-1. 위 앱 설치
-2. iOS 설정에서 해당 앱의 Bluetooth 권한 허용
-3. 앱 안에서 https://aidanpark.github.io/byteflusher/ 접속
-4. [장치 연결] → `ByteFlusher-XXXX` 선택
+Connection steps on iOS (example):
+1. Install the app above
+2. Grant Bluetooth permission for the app in iOS Settings
+3. Navigate to https://aidanpark.github.io/byteflusher/ within the app
+4. [Connect Device] → Select `ByteFlusher-XXXX`
 
-주의(정확성/안정성):
-- iOS는 백그라운드 전환/화면 꺼짐 시 BLE가 끊길 수 있어, **앱을 전면 유지 + 화면 켜둔 채**로 진행 권장
-- File Flusher는 파일 선택/브라우저 메모리/권한 정책 영향이 커서, 모바일에서는 **Text Flusher 위주**로 먼저 검증 권장
+Caution (accuracy/stability):
+- On iOS, BLE may disconnect when switching to background or when the screen turns off. **Keep the app in the foreground with the screen on** during operation.
+- File Flusher is heavily affected by file selection, browser memory, and permission policies, so on mobile, **verify with Text Flusher first**.
 
-### 3) 실제 사용 흐름
+### 3) Usage Flow
 
-#### A) Text Flusher (텍스트 Flush)
+#### A) Text Flusher
 
-페이지: [web/text.html](web/text.html)
+Page: [web/text.html](web/text.html)
 
-1. Flusher를 Target PC에 USB로 연결(키보드로 인식되어야 함)
-2. Control PC에서 페이지 접속 후 [장치 연결]
-3. Target PC의 입력 위치(에디터/터미널 등)에 커서를 올려둠
-4. Target PC 입력기를 **영문 상태**로 맞춤(초기 동기화는 환경마다 다를 수 있음)
-5. 텍스트 입력 후 [Start]
-6. 필요 시
-	 - Pause: 즉시 멈춤(큐 유지)
-	 - Resume: 이어서 진행
-	 - Stop: 즉시폐기(남은 큐 삭제)
+1. Connect the Flusher to the Target PC via USB (it must be recognized as a keyboard)
+2. Access the page on the Control PC and click [Connect Device]
+3. Place the cursor at the input location on the Target PC (editor, terminal, etc.)
+4. Set the Target PC input method to **English mode** (initial sync may vary by environment)
+5. Enter text and click [Start]
+6. As needed:
+	 - Pause: Immediately stops (queue preserved)
+	 - Resume: Continues from where it stopped
+	 - Stop: Immediately discards (remaining queue deleted)
 
-#### B) File Flusher (파일/폴더 Flush, Windows 전용)
+#### B) File Flusher (Windows Only)
 
-페이지: [web/files.html](web/files.html)
+Page: [web/files.html](web/files.html)
 
-1. (중요) Target PC는 **Windows + PowerShell**이 가능해야 함
-2. Target Directory 입력
-   - 현재 UI 제약(정확성 우선): **Windows 절대경로 + 공백 불가 + 영문(ASCII)만**
-3. 파일 1개 또는 폴더 1개 선택
-4. [Start]
-   - 장치가 Win+R → PowerShell 실행까지 자동으로 수행
-	- Run(Win+R)에는 PowerShell 실행만 입력하고, 런처/부트스트랩은 PowerShell 내부로 청크 전송해 조립/실행
-	- PowerShell에서 Base64를 디코드해 파일을 생성하고, SHA-256 해시로 검증
+1. (Important) Target PC must have **Windows + PowerShell** available
+2. Enter Target Directory
+   - Current UI constraint (accuracy-first): **Windows absolute path + no spaces + ASCII only**
+3. Select 1 file or 1 folder
+4. Click [Start]
+   - The device automatically performs Win+R → launches PowerShell
+	- Only the PowerShell launch command is entered in Run (Win+R); the launcher/bootstrap is sent as chunks into PowerShell for assembly/execution
+	- PowerShell decodes Base64 to create the file and verifies with SHA-256 hash
 
-참고
-- 부트스트랩 청크 조립용 임시 파일은 `%TEMP%` 아래에 잠깐 생성되며, 부트스트랩 실행 직후 자동 삭제됩니다.
-- 파일 경로는 Base64(UTF-16LE)로 전달되어 한글/유니코드 파일명도 안정성을 높였습니다.
-- 진단 로그 옵션을 켜면, 실패 시 `targetDir\.tmp\bf_last_error.txt`가 생성될 수 있습니다.
+Notes
+- Temporary files for bootstrap chunk assembly are briefly created under `%TEMP%` and automatically deleted right after bootstrap execution.
+- File paths are transmitted as Base64 (UTF-16LE) to improve stability for Korean/Unicode filenames.
+- If the diagnostic log option is enabled, `targetDir\.tmp\bf_last_error.txt` may be created on failure.
 
-주의(정확성/안정성)
-- 실행 중에는 Target PC 포커스를 다른 앱으로 빼앗기지 않게 유지하세요(알림/IME 팝업/자동완성 등)
-- 파일이 커질수록 Base64 길이가 늘어나 전송 시간이 길어집니다(대략 1.33배)
+Caution (accuracy/stability)
+- During execution, maintain focus on the Target PC — do not let other apps steal focus (notifications, IME popups, auto-complete, etc.)
+- Larger files mean longer Base64 strings, increasing transfer time (approximately 1.33x)
 
-추가 팁
-- 동일한 보드가 여러 대라면, 선택 목록에서 `ByteFlusher-XXXX` 형태의 이름으로 구분합니다(XXXX는 보드 고유값 기반).
-- 연결 후 상태 표시줄은 `${deviceName} / ${SERVICE_UUID}` 형식으로 표시됩니다.
+Additional Tips
+- If you have multiple identical boards, distinguish them by the `ByteFlusher-XXXX` name in the selection list (XXXX is based on a board-unique value).
+- After connection, the status bar displays in the format `${deviceName} / ${SERVICE_UUID}`.
 
 ---
 
-## ⚙️ 웹 설정(중요)
+## ⚙️ Web Settings (Important)
 
-웹 UI는 [index.html](index.html) / [web/text.html](web/text.html) / [web/files.html](web/files.html)로 구성되어 있습니다.
+The Web UI consists of [index.html](index.html) / [web/text.html](web/text.html) / [web/files.html](web/files.html).
 
-- Text Flush 로직: [web/text.js](web/text.js)
-- Files Flush 로직: [web/files.js](web/files.js)
+- Text Flush logic: [web/text.js](web/text.js)
+- Files Flush logic: [web/files.js](web/files.js)
 
-### Text Flusher 설정
+### Text Flusher Settings
 
-- 전송설정
-	- Chunk(bytes) / Delay(ms): BLE 구간 전송 분할/대기
-	- Retry Delay(ms): 연결 끊김 시 재시도 간격
-- 입력설정
-	- 한/영 전환키: Right Alt(Windows) / CapsLock(mac) 등
-	- 라인 시작 공백/탭 무시: 각 줄 맨 앞의 공백/탭을 전송 전에 제거
-	- 타이핑 딜레이(보드): Typing/Mode Switch/Key Press
+- Transmission settings
+	- Chunk (bytes) / Delay (ms): BLE segment transmission split/wait
+	- Retry Delay (ms): Retry interval on connection drop
+- Input settings
+	- Korean/English toggle key: Right Alt (Windows) / CapsLock (Mac), etc.
+	- Ignore leading spaces/tabs: Strips spaces/tabs at the beginning of each line before transmission
+	- Typing delays (board): Typing / Mode Switch / Key Press
 
-> 정확성 최우선이면: Typing Delay / Mode Switch Delay를 충분히 크게 유지하는 것을 권장합니다.
+> For maximum accuracy: Keep Typing Delay / Mode Switch Delay sufficiently high.
 
-### File Flusher 설정(Windows)
+### File Flusher Settings (Windows)
 
-- keyDelay/lineDelay/chunk 옵션은 “PowerShell 명령/베이스64 조각”을 타이핑할 때의 안정성에 직접 영향을 줍니다.
+- keyDelay/lineDelay/chunk options directly affect the stability of typing "PowerShell commands/Base64 chunks."
 - Overwrite Policy
-	- `fail`: 대상 파일이 이미 있으면 즉시 실패
-	- `overwrite`: 기존 파일을 삭제 후 새로 생성
-	- `backup`: 기존 파일을 백업 후 새로 생성
-		- 백업 규칙: `a.txt` → `a.txt.bak` (이미 있으면 `a.txt.bak.bak` 처럼 계속 `.bak`를 덧붙여 유니크하게 만듦)
+	- `fail`: Immediately fails if the target file already exists
+	- `overwrite`: Deletes the existing file and creates a new one
+	- `backup`: Backs up the existing file and creates a new one
+		- Backup rule: `a.txt` → `a.txt.bak` (if already exists, keeps appending `.bak` like `a.txt.bak.bak` to make it unique)
 
 ---
 
-## 📡 BLE UUID / 프로토콜
+## 📡 BLE UUID / Protocol
 
-서비스 UUID(고정):
+Service UUID (fixed):
 - `f3641400-00b0-4240-ba50-05ca45bf8abc`
 
 ### 1) Flush Text Characteristic
 
 - UUID: `f3641401-00b0-4240-ba50-05ca45bf8abc`
-- 속성: Write (with response)
-- 패킷 포맷(LE):
+- Properties: Write (with response)
+- Packet format (LE):
 	- `[sessionId(u16)][seq(u16)][payload(bytes...)]`
-- 목적:
-	- 긴 텍스트를 청크로 나눠 전송
-	- BT 끊김/재시도 시 같은 청크를 재전송하더라도 **중복 타이핑을 방지**
+- Purpose:
+	- Transmit long text in chunks
+	- **Prevent duplicate typing** even when retransmitting the same chunk after BT disconnection/retry
 
 ### 2) Config Characteristic
 
 - UUID: `f3641402-00b0-4240-ba50-05ca45bf8abc`
-- 속성: Write (with response)
-- 포맷(LE): `[typingDelayMs(u16)][modeSwitchDelayMs(u16)][keyPressDelayMs(u16)][toggleKey(u8)][flags(u8)]`
+- Properties: Write (with response)
+- Format (LE): `[typingDelayMs(u16)][modeSwitchDelayMs(u16)][keyPressDelayMs(u16)][toggleKey(u8)][flags(u8)]`
 - `flags`:
 	- bit0: Pause (1=paused)
-	- bit1: Abort (1=즉시폐기: RX 큐 clear + 내부 디코더 상태 리셋)
+	- bit1: Abort (1=immediate discard: RX queue clear + internal decoder state reset)
 
 ### 3) Status Characteristic (Flow Control)
 
 - UUID: `f3641403-00b0-4240-ba50-05ca45bf8abc`
-- 속성: Read + Notify
-- 포맷(LE): `[capacityBytes(u16)][freeBytes(u16)]`
-- 목적:
-	- 웹이 디바이스 버퍼에 여유가 있을 때만 전송하도록 제한하여,
-		**Pause/Stop이 "진짜 즉시" 동작**하고 정확성이 유지되게 함
+- Properties: Read + Notify
+- Format (LE): `[capacityBytes(u16)][freeBytes(u16)]`
+- Purpose:
+	- Limits the web to transmit only when the device buffer has capacity,
+		ensuring **Pause/Stop truly operates "immediately"** and accuracy is maintained
 
-### 4) Macro Characteristic (Windows 자동화)
+### 4) Macro Characteristic (Windows Automation)
 
 - UUID: `f3641404-00b0-4240-ba50-05ca45bf8abc`
-- 속성: Write (with response)
-- 목적:
-	- File Flusher에서 Win+R / Enter 같은 “특수키”를 안전하게 실행하기 위한 채널
-	- 텍스트 전송 채널(Flush Text)과 분리해서, 기존 Text Flusher 안정성을 유지
-- 포맷: `[cmd(u8)][len(u8)][payload(len bytes)]`
-	- cmd 예시: Win+R, Enter, Esc, ASCII 타이핑, Sleep(ms), 영문 강제
+- Properties: Write (with response)
+- Purpose:
+	- A channel for safely executing "special keys" like Win+R / Enter in the File Flusher
+	- Separated from the text transmission channel (Flush Text) to maintain existing Text Flusher stability
+- Format: `[cmd(u8)][len(u8)][payload(len bytes)]`
+	- cmd examples: Win+R, Enter, Esc, ASCII typing, Sleep(ms), force English mode
 
 ---
 
-## 🧪 권장 테스트(정확성 확인)
+## 🧪 Recommended Tests (Accuracy Verification)
 
-- 긴 텍스트로 Start → Pause: 즉시 멈추는지
-- Pause 중 Resume: 이어서 정상 진행되는지(누락/중복 없는지)
-- Start 중 Stop: 즉시 멈추고 이후 추가 타이핑이 더 나오지 않는지
-- Stop 후 다시 Start: 이전 잔여 영향(중간 상태) 없이 정상인지
-
----
-
-## 🔧 문제 해결
-
-### "장치 연결"이 안 됨
-- Chrome/Edge 사용 확인 (다른 브라우저는 Web Bluetooth 미지원/제한)
-- 페이지가 `https://` 또는 `http://localhost` 인지 확인
-- OS Bluetooth 권한/드라이버 확인
-
-### 타이핑이 씹히거나 순서가 꼬임
-- Target PC에서 자동완성/자동 들여쓰기/자동 괄호닫기 기능이 강한 IDE는 충돌 가능성이 큽니다.
-	- 메모장/간단한 텍스트 에디터에서 먼저 검증 권장
-- 보드 설정에서 Typing Delay / Mode Switch Delay를 늘려보세요.
-
-### (File Flusher) PowerShell 명령이 깨짐 (`e-Host` 같은 오타)
-- 증상 예: `Write-Host ...`가 `e-Host ...`처럼 **앞부분이 누락**되어 실행 오류
-- 원인: PowerShell 창이 뜨는 타이밍/포커스/초기화 과정에서 **첫 몇 글자가 드랍**되는 케이스
-- 대응: File Flusher 설정에서 아래 값을 올려 안정성을 확보하세요.
-	- `psLaunchDelayMs` (예: 2200~3500)
-	- `runDialogDelayMs` (예: 350~600)
-	- `bootstrapDelayMs` (예: 600~1200)
-	- `keyDelayMs` (최소 15 이상 권장)
-
-### Pause/Stop이 즉시 반응하지 않음
-- 펌웨어가 최신인지 확인하세요([src/main.cpp](src/main.cpp) 의 `kFirmwareVersion` 참고)
-- Status(Flow Control) 특성이 정상 동작해야 합니다.
+- Start with long text → Pause: Does it stop immediately?
+- Resume during Pause: Does it continue correctly (no missing/duplicate characters)?
+- Stop during Start: Does it stop immediately with no additional typing afterward?
+- Start again after Stop: Does it work normally without residual effects (intermediate state)?
 
 ---
 
-## 📄 라이선스
+## 🔧 Troubleshooting
 
-별도 명시가 없다면 저장소의 라이선스 정책을 따릅니다.
+### "Connect Device" Doesn't Work
+- Verify you're using Chrome/Edge (other browsers have limited/no Web Bluetooth support)
+- Ensure the page is served over `https://` or `http://localhost`
+- Check OS Bluetooth permissions/drivers
+
+### Typing is Dropped or Out of Order
+- IDEs with strong auto-complete/auto-indent/auto-bracket features on the Target PC are likely to cause conflicts.
+	- Test with Notepad or a simple text editor first
+- Try increasing Typing Delay / Mode Switch Delay in the board settings.
+
+### (File Flusher) PowerShell Commands Are Corrupted (e.g., `e-Host` Instead of `Write-Host`)
+- Symptom: `Write-Host ...` becomes `e-Host ...` with **leading characters dropped**, causing execution errors
+- Cause: During PowerShell window launch timing/focus/initialization, **the first few characters may be dropped**
+- Solution: Increase the following values in File Flusher settings to improve stability:
+	- `psLaunchDelayMs` (e.g., 2200~3500)
+	- `runDialogDelayMs` (e.g., 350~600)
+	- `bootstrapDelayMs` (e.g., 600~1200)
+	- `keyDelayMs` (minimum 15 recommended)
+
+### Pause/Stop Doesn't Respond Immediately
+- Verify the firmware is up to date (see `kFirmwareVersion` in [src/main.cpp](src/main.cpp))
+- The Status (Flow Control) characteristic must be functioning properly.
+
+---
+
+## 📄 License
+
+Unless otherwise specified, this repository follows its own license policy.

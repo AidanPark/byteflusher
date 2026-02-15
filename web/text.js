@@ -1,7 +1,9 @@
-// ByteFlusher Web Bluetooth 클라이언트 (Text Flush 전용)
-// - 이 파일은 web/text.html 화면에서 "텍스트를 정확하게 타이핑"하는 기능만 담당한다.
-// - 파일/폴더 Flush(베이스64/해시 검증 + PowerShell 자동화)는 web/files.js가 담당한다.
-// 참고: Web Bluetooth는 HTTPS 또는 localhost가 필요하다.
+// ByteFlusher Web Bluetooth client (Text Flush only)
+// - This file handles the "accurately type text" feature on web/text.html.
+// - File/Folder Flush (base64/hash verification + PowerShell automation) is handled by web/files.js.
+// Note: Web Bluetooth requires HTTPS or localhost.
+
+import { initI18n, t, getLocale } from './i18n.js';
 
 // BLE UUIDs must match firmware(src/main.cpp)
 // 연결 방식은 기존(보안 서비스 UUID) 1개만 사용한다.
@@ -160,14 +162,14 @@ async function readDeviceNicknameOnce() {
 
 async function writeDeviceNickname(nickname) {
   if (!nicknameChar) {
-    setStatus('오류', '닉네임 특성을 찾지 못했습니다. 펌웨어를 업데이트한 뒤 다시 연결하세요.');
+    setStatus(t('status.error'), t('error.noNicknameChar'));
     return;
   }
 
   const raw = String(nickname ?? '').trim();
   const s = sanitizeNickname(raw);
   if (raw && !s) {
-    setStatus('오류', '닉네임은 영문/숫자/-/_만 가능합니다. (한/영 전환 상태를 확인하세요)');
+    setStatus(t('status.error'), t('error.nicknameInvalid'));
     return;
   }
   try {
@@ -178,10 +180,10 @@ async function writeDeviceNickname(nickname) {
     }
     saveNicknameToLocalStorage(s);
     setNicknameUiValue(s);
-    setStatus('연결됨', `닉네임 저장됨: ${s || '(없음)'}`);
+    setStatus(t('status.connected'), t('status.nicknameSaved', { name: s || '-' }));
   } catch (err) {
     const msg = err?.message ?? String(err ?? '');
-    setStatus('오류', `닉네임 저장 실패: ${msg}`);
+    setStatus(t('status.error'), t('status.nicknameSaveFailed', { msg }));
   }
 }
 
@@ -255,7 +257,7 @@ const K_JONG_DATA = [
 
 function formatWallClock(ts) {
   if (!Number.isFinite(ts)) return '-';
-  return new Date(ts).toLocaleString('ko-KR', {
+  return new Date(ts).toLocaleString(getLocale(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -397,15 +399,15 @@ function updateStartEnabled() {
   if (els.btnStart) els.btnStart.disabled = !ok;
 
   let hint = '';
-  if (!isConnected) hint = '장치를 먼저 연결하세요.';
-  else if (!hasText) hint = '텍스트를 입력하세요.';
+  if (!isConnected) hint = t('text.connectFirst');
+  else if (!hasText) hint = t('text.enterText');
   setStartHint(hint);
 
-  const statusReason = ok ? '' : ` (${!isConnected ? '장치 연결 필요' : '텍스트 입력 필요'})`;
+  const statusReason = ok ? '' : ` (${!isConnected ? t('text.needConnection') : t('text.needText')})`;
   const checklist = [
-    `${isConnected ? '[OK]' : '[ ]'} 장치 연결 ${isConnected ? '됨' : '필요'}`,
-    `${hasText ? '[OK]' : '[ ]'} 소스: 텍스트 ${hasText ? '입력됨' : '입력 필요'}`,
-    `${ok ? '[OK]' : '[ ]'} 상태: ${ok ? '시작 가능' : `시작 불가${statusReason}`}`,
+    `${isConnected ? '[OK]' : '[ ]'} ${isConnected ? t('text.checkDeviceConnected') : t('text.checkDeviceNeeded')}`,
+    `${hasText ? '[OK]' : '[ ]'} ${hasText ? t('text.checkSourceEntered') : t('text.checkSourceNeeded')}`,
+    `${ok ? '[OK]' : '[ ]'} ${ok ? t('text.checkReady') : t('text.checkNotReady', { reason: statusReason })}`,
   ].join('\n');
   setStartChecklist(checklist);
 }
@@ -454,10 +456,10 @@ function updatePreStartMetrics() {
 
   // Preview-only metrics.
   if (els.etaText) {
-    els.etaText.textContent = bytes.length > 0 ? `총 ${formatMinutes(est.estimatedMs)}분` : '-';
+    els.etaText.textContent = bytes.length > 0 ? t('metric.totalMinutes', { min: formatMinutes(est.estimatedMs) }) : '-';
   }
   if (els.estimateBasisText) {
-    const replacedNote = pre.replacedCount > 0 ? ` / 치환 ${pre.replacedCount}개("${pre.replacement}")` : '';
+    const replacedNote = pre.replacedCount > 0 ? ` / ${t('text.replacedNote', { count: pre.replacedCount, replacement: pre.replacement })}` : '';
     els.estimateBasisText.textContent = `preview / ${bytes.length} bytes / ${est.keystrokes} keys, switch ${est.modeSwitches}${replacedNote} / chunk=${chunkSize}, delay=${chunkDelayMs}ms / typing=${timing.typingDelayMs}ms, mode=${timing.modeSwitchDelayMs}ms, key=${timing.keyPressDelayMs}ms / toggle=${toggleKey}`;
   }
 
@@ -587,7 +589,7 @@ function updateJobMetrics() {
   const pctKeys = totalKeys > 0 ? (sentKeys / totalKeys) * 100 : 0;
 
   if (els.progressText) {
-    els.progressText.textContent = `${pctKeys.toFixed(1)}% (~${sentKeys}/${totalKeys}키)`;
+    els.progressText.textContent = t('metric.keysProgress', { pct: pctKeys.toFixed(1), sent: sentKeys, total: totalKeys });
   }
 
   if (els.etaText) {
@@ -595,7 +597,7 @@ function updateJobMetrics() {
     const nowPerf = job.endedWallMs != null ? null : performance.now();
     const activeElapsedMs = nowPerf != null ? Math.max(0, nowPerf - job.startedPerfMs - pausedTotalMs) : null;
     const remainingMs = activeElapsedMs != null ? Math.max(0, job.estimatedMs - activeElapsedMs) : 0;
-    els.etaText.textContent = `총 ${formatMinutes(job.estimatedMs)}분 (남음 ${formatMinutes(remainingMs)}분)`;
+    els.etaText.textContent = t('metric.totalMinutesRemaining', { total: formatMinutes(job.estimatedMs), remaining: formatMinutes(remainingMs) });
   }
 }
 
@@ -659,7 +661,7 @@ async function waitWhilePaused(offset, total) {
   while (paused && !stopRequested) {
     if (!pauseStatusShown) {
       pauseStatusShown = true;
-      setStatus('일시정지', `${offset}/${total} bytes`);
+      setStatus(t('status.paused'), `${offset}/${total} bytes`);
     }
     await sleep(120);
   }
@@ -750,29 +752,26 @@ function getConnectFailureHelpText(err) {
   const msg = (err?.message ?? String(err ?? '')).toString();
 
   if (/No\s+Characteristics\s+matching\s+UUID/i.test(msg) || /No\s+Services\s+matching\s+UUID/i.test(msg)) {
-    return [
-      '장치의 GATT 특성을 찾지 못했습니다(펌웨어/웹 UI 버전 불일치 가능).',
-      '보드에 최신 펌웨어를 업로드한 뒤 페이지를 새로고침하고 다시 연결하세요.',
-    ].join(' ');
+    return t('error.gattNotFound');
   }
 
   if (name === 'NotSupportedError') {
-    return '이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).';
+    return t('error.notSupported');
   }
 
   if (name === 'NotAllowedError') {
-    return '권한이 거부되었습니다. 장치 선택/권한 팝업에서 허용한 뒤 다시 시도하세요.';
+    return t('error.notAllowed');
   }
 
-  return `연결에 실패했습니다. ${msg}`;
+  return t('error.connectFailed', { msg });
 }
 
 async function connect() {
   if (!navigator.bluetooth) {
-    throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).');
+    throw new Error(t('error.noWebBluetooth'));
   }
 
-  setStatus('장치 선택 중...', 'BLE 장치 선택 팝업을 확인하세요.');
+  setStatus(t('status.selectingDevice'), t('status.selectDevicePopup'));
 
   const requestOptions = {
     // 동일한 BLE 장치가 많이 잡히는 환경에서 선택을 쉽게 한다.
@@ -788,7 +787,7 @@ async function connect() {
     // 사용자가 취소한 경우 등은 조용히 기존 상태를 유지한다.
     const name = (err?.name ?? '').toString();
     if (name === 'NotFoundError') {
-      setStatus('연결 안 됨', '');
+      setStatus(t('status.disconnected'), '');
       setUiConnected(false);
       return;
     }
@@ -798,12 +797,12 @@ async function connect() {
   device.addEventListener('gattserverdisconnected', () => {
     if (flushInProgress && !stopRequested) {
       if (paused) {
-        setStatus('연결 끊김', '일시정지 중 연결 끊김');
+        setStatus(t('status.connectionLost'), t('status.connectionLostWhilePaused'));
       } else {
-        setStatus('연결 끊김', '전송 중 연결 끊김');
+        setStatus(t('status.connectionLost'), t('status.connectionLostWhileTransfer'));
       }
     } else {
-      setStatus('연결 안 됨', '');
+      setStatus(t('status.disconnected'), '');
     }
     setUiConnected(false);
     server = null;
@@ -818,7 +817,7 @@ async function connect() {
     resolveStatusWaiters();
   });
 
-  setStatus('연결 중...', device.name ?? '');
+  setStatus(t('status.connecting'), device.name ?? '');
   let service = null;
   try {
     server = await device.gatt.connect();
@@ -826,7 +825,7 @@ async function connect() {
     service = await server.getPrimaryService(SERVICE_UUID);
     flushChar = await service.getCharacteristic(FLUSH_TEXT_CHAR_UUID);
   } catch (err) {
-    setStatus('연결 실패', getConnectFailureHelpText(err));
+    setStatus(t('status.connectionFailed'), getConnectFailureHelpText(err));
     setUiConnected(false);
     updateStartEnabled();
     return;
@@ -866,20 +865,20 @@ async function connect() {
     setNicknameUiValue(deviceNick || fallback);
   }
 
-  setStatus('연결됨', `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
+  setStatus(t('status.connected'), `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
   setUiConnected(true);
 }
 
 async function reconnectLoop() {
   if (!device) {
-    throw new Error('장치가 선택되지 않았습니다.');
+    throw new Error(t('error.noDevice'));
   }
 
   let attempt = 0;
   while (!stopRequested) {
     attempt += 1;
     try {
-      setStatus('재연결 중...', `시도 ${attempt}`);
+      setStatus(t('status.reconnecting'), t('status.attempt', { n: attempt }));
 
       if (!device.gatt.connected) {
         server = await device.gatt.connect();
@@ -924,12 +923,12 @@ async function reconnectLoop() {
         setNicknameUiValue(deviceNick || fallback);
       }
 
-      setStatus('재연결 성공', `${device.name ?? 'BLE Device'}`);
+      setStatus(t('status.reconnectSuccess'), `${device.name ?? 'BLE Device'}`);
       setUiConnected(true);
       return;
     } catch (err) {
       const msg = err?.message ?? String(err);
-      setStatus('재연결 실패', `시도 ${attempt}: ${msg}`);
+      setStatus(t('status.reconnectFailed'), `${t('status.attempt', { n: attempt })}: ${msg}`);
       const backoffMs = Math.min(5000, 250 + attempt * 250);
       await sleep(backoffMs);
     }
@@ -938,24 +937,22 @@ async function reconnectLoop() {
 
 async function requestBootloader() {
   if (!bootloaderChar) {
-    setStatus('오류', '부트로더 특성을 찾지 못했습니다. 펌웨어를 업데이트한 뒤 다시 연결하세요.');
+    setStatus(t('status.error'), t('error.noBootloaderChar'));
     return;
   }
   if (flushInProgress) {
-    setStatus('오류', '전송 중에는 부트로더 진입을 할 수 없습니다. Stop 후 다시 시도하세요.');
+    setStatus(t('status.error'), t('error.bootloaderDuringTransfer'));
     return;
   }
 
-  const ok = confirm(
-    '부트로더(펌웨어 업로드) 모드로 재부팅합니다.\n\n- BLE 연결이 끊깁니다.\n- 업로드용 COM 포트가 나타납니다.\n\n계속할까요?',
-  );
+  const ok = confirm(t('confirm.bootloader'));
   if (!ok) return;
 
-  setStatus('재부팅 요청...', '부트로더 진입 중');
+  setStatus(t('status.rebootRequesting'), t('status.rebootEntering'));
   try {
     await bootloaderChar.writeValue(Uint8Array.of(1));
   } catch (err) {
-    setStatus('실패', `부트로더 요청 실패: ${String(err?.message ?? err ?? '')}`);
+    setStatus(t('status.failed'), t('error.bootloaderRequestFailed', { msg: String(err?.message ?? err ?? '') }));
   }
 }
 
@@ -1051,10 +1048,10 @@ async function abortDeviceQueueNow() {
 
 async function applyDeviceSettings() {
   if (!device?.gatt?.connected) {
-    throw new Error('BLE가 연결되어 있지 않습니다.');
+    throw new Error(t('error.bleNotConnected'));
   }
   if (!configChar) {
-    throw new Error('장치 설정 characteristic이 없습니다(펌웨어 업데이트 필요).');
+    throw new Error(t('error.noConfigChar'));
   }
 
   const timing = getDeviceTimingSettings();
@@ -1064,9 +1061,9 @@ async function applyDeviceSettings() {
   // pause 상태에서 설정을 적용해도, pause가 풀려버리면 안 된다.
   payload[7] = paused ? 1 : 0;
 
-  setStatus('장치 설정 적용 중...', `typing=${timing.typingDelayMs}ms, modeSwitch=${timing.modeSwitchDelayMs}ms, keyPress=${timing.keyPressDelayMs}ms, toggle=${toggleKey}`);
+  setStatus(t('status.applyingSettings'), `typing=${timing.typingDelayMs}ms, modeSwitch=${timing.modeSwitchDelayMs}ms, keyPress=${timing.keyPressDelayMs}ms, toggle=${toggleKey}`);
   await configChar.writeValue(payload);
-  setStatus('장치 설정 적용됨', `typing=${timing.typingDelayMs}ms, modeSwitch=${timing.modeSwitchDelayMs}ms, keyPress=${timing.keyPressDelayMs}ms, toggle=${toggleKey}`);
+  setStatus(t('status.settingsApplied'), `typing=${timing.typingDelayMs}ms, modeSwitch=${timing.modeSwitchDelayMs}ms, keyPress=${timing.keyPressDelayMs}ms, toggle=${toggleKey}`);
 }
 
 async function disconnect() {
@@ -1074,7 +1071,7 @@ async function disconnect() {
   paused = false;
   pauseStatusShown = false;
   setUiRunState({ running: false, paused: false });
-  setStatus('연결 해제 중...', '');
+  setStatus(t('status.disconnecting'), '');
   if (device?.gatt?.connected) {
     device.gatt.disconnect();
   }
@@ -1105,13 +1102,13 @@ function buildPacket(sessionId, seq, payload) {
 
 async function flushText() {
   if (!flushChar) {
-    throw new Error('BLE characteristic이 준비되지 않았습니다.');
+    throw new Error(t('error.noFlushChar'));
   }
 
   const rawText = els.textInput.value ?? '';
   const pre = preprocessTextForFirmware(rawText);
   const bytes = new TextEncoder().encode(pre.text);
-      setStatus('연결됨', `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
+      setStatus(t('status.connected'), `${device.name ?? 'ByteFlusher'} / ${SERVICE_UUID}`);
   // NOTE: UI에서 설정은 Start~Stop 동안 잠긴다.
   const initialChunkSize = clampNumber(els.chunkSize.value, 1, 200, DEFAULT_CHUNK_SIZE);
   const initialDelayMs = clampNumber(els.chunkDelay.value, 0, 200, DEFAULT_CHUNK_DELAY);
@@ -1140,8 +1137,8 @@ async function flushText() {
   let seq = 0;
   let offset = 0;
 
-  const replacedNote = pre.replacedCount > 0 ? ` / 치환 ${pre.replacedCount}개("${pre.replacement}")` : '';
-  setStatus('전송 시작', `${bytes.length} bytes / chunk=${initialChunkSize}, delay=${initialDelayMs}ms / session=${sessionId}${replacedNote}`);
+  const replacedNote = pre.replacedCount > 0 ? ` / ${t('text.replacedNote', { count: pre.replacedCount, replacement: pre.replacement })}` : '';
+  setStatus(t('status.transferStart'), `${bytes.length} bytes / chunk=${initialChunkSize}, delay=${initialDelayMs}ms / session=${sessionId}${replacedNote}`);
 
   // 속도보다 안정성 우선: 전송 시작 전에 현재 장치 타이밍 설정을 한 번 적용한다.
   // (configChar가 없으면 무시하고 계속 진행)
@@ -1155,7 +1152,7 @@ async function flushText() {
 
   while (offset < bytes.length) {
     if (stopRequested) {
-      setStatus('중지됨', `${offset}/${bytes.length} bytes`);
+      setStatus(t('status.stopped'), `${offset}/${bytes.length} bytes`);
       setUiRunState({ running: false, paused: false });
       setJobProgress(offset);
       finishJobMetrics();
@@ -1168,7 +1165,7 @@ async function flushText() {
     }
 
     if (!device?.gatt?.connected || !flushChar) {
-      setStatus('연결 끊김', '전송 중 연결 끊김');
+      setStatus(t('status.connectionLost'), t('status.connectionLostWhileTransfer'));
       await reconnectLoop();
       continue;
     }
@@ -1188,14 +1185,14 @@ async function flushText() {
       offset += chunk.length;
       seq += 1;
       setJobProgress(offset);
-      setStatus('전송 중...', `${offset}/${bytes.length} bytes (chunk #${seq})`);
+      setStatus(t('status.transferring'), t('status.sendProgress', { offset, total: bytes.length, seq }));
 
       if (delayMs > 0) {
         await sleep(delayMs);
       }
     } catch (err) {
       const msg = err?.message ?? String(err);
-      setStatus('전송 오류', `청크 재시도 예정: ${msg}`);
+      setStatus(t('status.transferError'), t('status.chunkRetryPending', { msg }));
 
       try {
         if (!device?.gatt?.connected) {
@@ -1209,7 +1206,7 @@ async function flushText() {
     }
   }
 
-  setStatus('전송 완료', `${bytes.length} bytes / session=${sessionId}`);
+  setStatus(t('status.transferComplete'), `${bytes.length} bytes / session=${sessionId}`);
   setUiRunState({ running: false, paused: false });
   setJobProgress(bytes.length);
   finishJobMetrics();
@@ -1219,7 +1216,7 @@ els.btnConnect.addEventListener('click', async () => {
   try {
     await connect();
   } catch (err) {
-    setStatus('오류', err?.message ?? String(err));
+    setStatus(t('status.error'), err?.message ?? String(err));
     setUiConnected(false);
   }
 });
@@ -1228,7 +1225,7 @@ els.btnDisconnect.addEventListener('click', async () => {
   try {
     await disconnect();
   } catch (err) {
-    setStatus('오류', err?.message ?? String(err));
+    setStatus(t('status.error'), err?.message ?? String(err));
   }
 });
 
@@ -1281,7 +1278,7 @@ els.btnStop.addEventListener('click', async () => {
     // ignore
   }
 
-  setStatus('중지됨', '장치 큐를 즉시 폐기했습니다.');
+  setStatus(t('status.stopped'), t('status.deviceQueueAborted'));
 });
 
 if (els.btnStart) {
@@ -1289,7 +1286,7 @@ if (els.btnStart) {
     try {
       await flushText();
     } catch (err) {
-      setStatus('오류', err?.message ?? String(err));
+      setStatus(t('status.error'), err?.message ?? String(err));
       setUiRunState({ running: false, paused: false });
       finishJobMetrics();
     }
@@ -1302,7 +1299,7 @@ if (els.btnPause) {
     paused = true;
     pauseStatusShown = false;
     setUiRunState({ running: true, paused: true });
-    setStatus('일시정지 요청', '현재 청크 처리 후 멈춥니다.');
+    setStatus(t('status.pauseRequested'), t('status.pauseHint'));
 
     try {
       await setDevicePaused(true);
@@ -1318,7 +1315,7 @@ if (els.btnResume) {
     paused = false;
     pauseStatusShown = false;
     setUiRunState({ running: true, paused: false });
-    setStatus('재개', '전송을 계속합니다.');
+    setStatus(t('status.resumed'), t('status.resumeHint'));
 
     try {
       await setDevicePaused(false);
@@ -1400,8 +1397,8 @@ if (els.btnResetSettings) {
 
     if (els.ignoreLeadingWhitespace) els.ignoreLeadingWhitespace.checked = DEFAULT_IGNORE_LEADING_WHITESPACE;
 
-    setStatus('설정 초기화됨', '기본값으로 되돌렸습니다.');
-    showTextSettingsToast('초기화됨', 1000);
+    setStatus(t('status.settingsReset'), t('status.settingsResetDetail'));
+    showTextSettingsToast(t('toast.reset'), 1000);
   });
 }
 
@@ -1446,14 +1443,17 @@ if (els.btnApplyDeviceSettings) {
   els.btnApplyDeviceSettings.addEventListener('click', async () => {
     try {
       await applyDeviceSettings();
-      showTextSettingsToast('저장됨', 1000);
+      showTextSettingsToast(t('toast.saved'), 1000);
     } catch (err) {
-      setStatus('오류', err?.message ?? String(err));
+      setStatus(t('status.error'), err?.message ?? String(err));
     }
   });
 }
 
 setUiConnected(false);
 setUiRunState({ running: false, paused: false });
-setStatus('연결 안 됨', '');
+setStatus(t('status.disconnected'), '');
 clearJobMetrics();
+
+// Initialize i18n (applies translations to DOM after JSON load)
+await initI18n();

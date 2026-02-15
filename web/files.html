@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ByteFlusher — File Flush (Windows PowerShell, Base64, SHA-256 verify)</title>
     <meta
       name="description"
-      content="ByteFlusher File Flush: Web Bluetooth(BLE)로 파일/폴더를 전송하면 Target PC(Windows)에서 PowerShell로 Base64를 디코드해 파일을 생성하고 SHA-256으로 무결성 검증합니다."
+      content="ByteFlusher File Flush: Send files/folders via Web Bluetooth (BLE) and the Target PC (Windows) decodes Base64 via PowerShell and verifies integrity with SHA-256."
     />
 
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
@@ -15,12 +15,12 @@
     <link rel="canonical" href="https://aidanpark.github.io/byteflusher/web/files.html" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:site_name" content="ByteFlusher" />
     <meta property="og:title" content="ByteFlusher — File Flush" />
     <meta
       property="og:description"
-      content="BLE 전송 → Windows PowerShell로 파일 생성(Base64 decode) + SHA-256 검증. 정확성 우선."
+      content="BLE transfer → Windows PowerShell file creation (Base64 decode) + SHA-256 verification. Accuracy-first."
     />
     <meta property="og:url" content="https://aidanpark.github.io/byteflusher/web/files.html" />
     <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_files_preview.png" />
@@ -29,7 +29,7 @@
     <meta name="twitter:title" content="ByteFlusher — File Flush" />
     <meta
       name="twitter:description"
-      content="Windows PowerShell 기반 파일 생성/검증(Base64 decode + SHA-256). BLE(Web Bluetooth)로 전송."
+      content="Windows PowerShell file creation/verification (Base64 decode + SHA-256). Sent via BLE (Web Bluetooth)."
     />
     <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_files_preview.png" />
 
@@ -52,270 +52,263 @@
         <aside class="sidebar">
           <section class="card">
             <div class="cardHeaderRow">
-              <h2 class="sidebarTitle" style="margin: 0;">장치</h2>
+              <h2 class="sidebarTitle" style="margin: 0;" data-i18n="common.device">Device</h2>
             </div>
             <fieldset id="deviceFieldset">
               <div class="row">
-                <button id="btnConnect" class="primary">장치 연결</button>
-                <button id="btnDisconnect" disabled>연결 해제</button>
-                <button id="btnBootloader" class="danger" disabled>부트로더 진입</button>
+                <button id="btnConnect" class="primary" data-i18n="common.connect">Connect Device</button>
+                <button id="btnDisconnect" disabled data-i18n="common.disconnect">Disconnect</button>
+                <button id="btnBootloader" class="danger" disabled data-i18n="common.bootloader">Enter Bootloader</button>
               </div>
 
               <div class="grid2" style="margin-top: 10px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  닉네임
-                  <input id="deviceNickname" class="textField" type="text" maxlength="12" placeholder="예: team1" />
+                  <span data-i18n="common.nickname">Nickname</span>
+                  <input id="deviceNickname" class="textField" type="text" maxlength="12" placeholder="e.g. team1" data-i18n-placeholder="common.nicknamePlaceholderFiles" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  보드에 저장되며, 광고 이름에 반영됩니다(영문/숫자/-/_).
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="common.nicknameHint">
+                  Saved to board; reflected in advertising name (alphanumeric/-/_).
                 </p>
               </div>
 
               <div class="row" style="margin-top: 8px;">
-                <button id="btnApplyNickname" type="button" disabled>닉네임 저장</button>
+                <button id="btnApplyNickname" type="button" disabled data-i18n="common.saveNickname">Save Nickname</button>
               </div>
             </fieldset>
             <div class="status">
-              <div><span class="label">상태</span> <span id="statusText">연결 안 됨</span></div>
+              <div><span class="label" data-i18n="common.status">Status</span> <span id="statusText" data-i18n="status.disconnected">Disconnected</span></div>
               <div class="muted small" id="detailsText"></div>
             </div>
           </section>
 
           <section class="card">
-            <h2 class="sidebarTitle">주의사항</h2>
+            <h2 class="sidebarTitle" data-i18n="common.cautions">Cautions</h2>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
-              <li><b>허가된 환경 전용:</b> 본인 소유/관리 시스템 또는 명시적으로 허가받은 환경에서의 테스트/개발 자동화/데모 목적 사용을 전제로 합니다.</li>
-              <li>무단 접근, 보안 우회, 비인가 파일 생성/입력 등 불법/비윤리적 목적으로 사용하지 마세요.</li>
-              <li>OS 사전 페어링 없이, 브라우저(Chrome/Edge)에서 <b>장치 연결</b>만으로 사용합니다.</li>
-              <li>Target directory: 절대경로 / 영문(ASCII)만 / 공백 불가</li>
-              <li>입력: 최상위 폴더 1개 또는 파일 1개</li>
-              <li>내용: 바이트 그대로 보존(Base64 → WriteAllBytes)</li>
-              <li>PowerShell: Win+R로 자동 실행(포커스/팝업/UAC/IME에 취약)</li>
-              <li>사람이 안 건드려도 Windows 알림/백신/업데이트/UAC 등 시스템 UI가 포커스를 뺏으면 실패할 수 있음</li>
-              <li>권장: 화면보호기/자동잠금/절전 OFF, 알림 OFF, 작업 중 마우스/키보드 조작 금지</li>
-              <li>권장: 권한 문제를 피하려면 사용자 폴더 아래 경로 사용(예: C:\Users\me\...)</li>
+              <li data-i18n-html="files.cautionAuthBold"><b>Authorized environments only:</b> Intended for testing/development automation/demo purposes on systems you own/manage or in explicitly authorized environments.</li>
+              <li data-i18n="files.cautionIllegalFiles">Do not use for unauthorized access, security bypass, unauthorized file creation/input, or any illegal/unethical purpose.</li>
+              <li data-i18n-html="common.cautionNoPairing">No OS pre-pairing needed; just use <b>Connect Device</b> from the browser (Chrome/Edge).</li>
+              <li data-i18n="files.cautionTargetDir">Target directory: absolute path / ASCII only / no spaces</li>
+              <li data-i18n="files.cautionInput">Input: one top-level folder or one file</li>
+              <li data-i18n="files.cautionContent">Content: bytes preserved as-is (Base64 → WriteAllBytes)</li>
+              <li data-i18n="files.cautionPowerShell">PowerShell: auto-launched via Win+R (vulnerable to focus/popup/UAC/IME)</li>
+              <li data-i18n="files.cautionFocusSteal">Even without user interaction, system UI (notifications/antivirus/updates/UAC) can steal focus and cause failure</li>
+              <li data-i18n="files.cautionRecommend">Recommended: screen saver/auto-lock/sleep OFF, notifications OFF, no mouse/keyboard use during operation</li>
+              <li data-i18n="files.cautionUserFolder">Recommended: use a path under user folder to avoid permission issues (e.g. C:\Users\me\...)</li>
             </ul>
           </section>
 
           <details class="card cardCollapsible" id="settingsCardFiles">
             <summary class="cardSummary">
-              <span class="cardSummaryTitle">전송설정</span>
+              <span class="cardSummaryTitle" data-i18n="common.transferSettings">Transfer Settings</span>
             </summary>
             <fieldset id="settingsFieldset">
               <div class="grid2">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  키 간격(typing) 대기 (ms)
-                  <input id="typingDelayMsFiles" type="number" min="0" max="1000" step="1" value="10" />
+                  <span data-i18n="files.settingsTypingDelay">Typing delay (ms)</span>
+                  <input id="typingDelayMsFiles" type="number" min="0" max="1000" step="1" value="2" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  문자 1개 입력 후 대기 시간입니다. 너무 짧으면 콘솔/IME 환경에서 누락될 수 있습니다.
-                  (공격적 튜닝 가능: 0~)
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsTypingDelayHint">
+                  Wait time after each keystroke. Too short may cause drops in console/IME environments. (Aggressive tuning possible: 0~)
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  키 눌림 유지(press) (ms)
-                  <input id="keyPressDelayMsFiles" type="number" min="0" max="300" step="1" value="10" />
+                  <span data-i18n="files.settingsKeyPressDelay">Key press hold (ms)</span>
+                  <input id="keyPressDelayMsFiles" type="number" min="0" max="300" step="1" value="2" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  키를 "누르고 있는 시간"입니다. 너무 짧으면 일부 환경에서 눌림이 인식되지 않을 수 있습니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsKeyPressDelayHint">
+                  How long a key is held down. Too short may not register in some environments.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  Line(Enter) 후 대기 (ms)
+                  <span data-i18n="files.settingsLineDelay">Line (Enter) delay (ms)</span>
                   <input id="lineDelayMsFiles" type="number" min="0" max="2000" step="1" value="20" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  Enter 입력 직후 안정화 대기입니다. 명령 처리/화면 갱신이 느린 환경에서 도움됩니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsLineDelayHint">
+                  Stabilization wait after Enter. Helps in environments with slow command processing/screen refresh.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  명령 간 대기 (ms)
+                  <span data-i18n="files.settingsCommandDelay">Command interval (ms)</span>
                   <input id="commandDelayMsFiles" type="number" min="0" max="4000" step="5" value="50" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  PowerShell 명령(한 줄) 실행 후 다음 명령으로 넘어가기 전 대기입니다(청크 반복 시 중요).
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsCommandDelayHint">
+                  Wait after a PowerShell command (one line) before the next (important for chunk loops).
                 </p>
               </div>
 
               <hr class="sidebarDivider" />
 
-              <h2 class="settingsTitle" style="margin-top: 14px;">Base64 / 청크설정</h2>
+              <h2 class="settingsTitle" style="margin-top: 14px;" data-i18n="files.settingsBase64ChunkTitle">Base64 / Chunk Settings</h2>
               <div class="grid2" style="margin-top: 12px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  부트스트랩 청크 길이 (Chars)
-                  <input id="bootChunkCharsFiles" type="number" min="50" max="4000" step="50" value="200" />
+                  <span data-i18n="files.settingsBootChunkChars">Bootstrap chunk length (Chars)</span>
+                  <input id="bootChunkCharsFiles" type="number" min="50" max="4000" step="50" value="2000" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  bf_boot_append에 들어가는(부트스트랩 -EncodedCommand Base64) 문자열을 몇 글자 단위로 나눌지 결정합니다.
-                  길수록 빠르지만 콘솔 환경에 따라 키 누락 위험이 커질 수 있습니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsBootChunkCharsHint">
+                  Determines how many characters per bf_boot_append chunk (bootstrap -EncodedCommand Base64). Longer is faster but increases risk of keystroke drops.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  청크 길이 (Chars)
-                  <input id="chunkCharsFiles" type="number" min="200" max="10000" step="50" value="1200" />
+                  <span data-i18n="files.settingsChunkChars">Chunk length (Chars)</span>
+                  <input id="chunkCharsFiles" type="number" min="200" max="10000" step="50" value="2000" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  Base64 문자열을 몇 글자 단위로 나눌지 결정합니다. 길수록 빠르지만 누락/오류 위험이 커집니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsChunkCharsHint">
+                  Determines how many characters per Base64 chunk. Longer is faster but increases error/drop risk.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  청크 사이 대기 (ms)
+                  <span data-i18n="files.settingsChunkDelay">Inter-chunk delay (ms)</span>
                   <input id="chunkDelayMsFiles" type="number" min="0" max="2000" step="5" value="20" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  청크 1개를 보낸 뒤 다음 청크를 보내기 전 대기입니다(입력/처리 안정화용).
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsChunkDelayHint">
+                  Wait after sending one chunk before the next (for input/processing stabilization).
                 </p>
               </div>
 
               <hr class="sidebarDivider" />
 
-              <h2 class="settingsTitle" style="margin-top: 14px;">쓰기설정</h2>
+              <h2 class="settingsTitle" style="margin-top: 14px;" data-i18n="files.settingsWriteTitle">Write Settings</h2>
               <div class="grid2" style="margin-top: 12px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  Overwrite 정책
+                  <span data-i18n="files.overwritePolicy">Overwrite Policy</span>
                   <select id="overwritePolicyFiles">
-                    <option value="fail" selected>fail (권장)</option>
-                    <option value="overwrite">overwrite</option>
-                    <option value="backup">backup (.bak)</option>
+                    <option value="fail" selected data-i18n="files.overwriteFail">fail (recommended)</option>
+                    <option value="overwrite" data-i18n="files.overwriteOverwrite">overwrite</option>
+                    <option value="backup" data-i18n="files.overwriteBackup">backup (.bak)</option>
                   </select>
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  대상 파일이 이미 존재할 때 동작입니다. 기본은 fail로 두고, 필요 시에만 overwrite/backup을 사용하세요.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.overwritePolicyHint">
+                  Behavior when a target file already exists. Keep 'fail' by default; use overwrite/backup only when needed.
                 </p>
               </div>
 
               <hr class="sidebarDivider" />
 
-              <h2 class="settingsTitle" style="margin-top: 14px;">자동화/부트스트랩</h2>
+              <h2 class="settingsTitle" style="margin-top: 14px;" data-i18n="files.settingsAutomationTitle">Automation / Bootstrap</h2>
               <div class="grid2" style="margin-top: 12px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  Run(Win+R) 열기 후 대기 (ms)
+                  <span data-i18n="files.settingsRunDialogDelay">Run (Win+R) dialog delay (ms)</span>
                   <input id="runDialogDelayMsFiles" type="number" min="100" max="4000" step="10" value="350" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  Win+R 입력 후 Run 창이 완전히 포커스를 잡을 때까지 기다립니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsRunDialogDelayHint">
+                  Wait for the Run dialog to fully gain focus after Win+R.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  PowerShell 실행 후 대기 (ms)
+                  <span data-i18n="files.settingsPsLaunchDelay">PowerShell launch delay (ms)</span>
                   <input id="psLaunchDelayMsFiles" type="number" min="1200" max="20000" step="50" value="9000" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  PowerShell이 뜨고 프롬프트가 입력 가능한 상태가 될 때까지 기다립니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsPsLaunchDelayHint">
+                  Wait for PowerShell to open and the prompt to become ready for input.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  부트스트랩 후 대기 (ms)
+                  <span data-i18n="files.settingsBootstrapDelay">Post-bootstrap delay (ms)</span>
                   <input id="bootstrapDelayMsFiles" type="number" min="200" max="10000" step="10" value="800" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  부트스트랩 스크립트 초기화 후 다음 명령으로 넘어가기 전 안정화 대기입니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsBootstrapDelayHint">
+                  Stabilization wait after bootstrap script initialization before continuing.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  진단 로그 남기기
+                  <span data-i18n="files.settingsDiagLog">Enable diagnostic logging</span>
                   <input id="diagLogFiles" type="checkbox" checked />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  실패 시 targetDir\.tmp\bf_last_error.txt 에 오류 로그를 기록합니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.settingsDiagLogHint">
+                  On failure, writes error log to targetDir\.tmp\bf_last_error.txt.
                 </p>
               </div>
 
               <div class="row" style="margin-top: 12px;">
-                <button id="btnApplyFilesSettings" class="primary" type="button">설정 적용</button>
-                <button id="btnResetFilesSettings" type="button">설정 초기화</button>
+                <button id="btnApplyFilesSettings" class="primary" type="button" data-i18n="common.applySettings">Apply Settings</button>
+                <button id="btnResetFilesSettings" type="button" data-i18n="common.resetSettings">Reset Settings</button>
                 <span id="filesSettingsToast" class="muted small settingsToast" aria-live="polite"></span>
               </div>
             </fieldset>
           </details>
 
           <section class="card">
-            <h2 class="sidebarTitle">참고</h2>
+            <h2 class="sidebarTitle" data-i18n="common.notes">Notes</h2>
             <div class="muted small" style="margin: 0 0 10px 0;">
-              <div style="font-weight: 600; margin-bottom: 4px;">전체 실행 절차(요약)</div>
-              <div>
-                PowerShell 실행(Win+R) → 콘솔 워밍업/BF_READY → 런처 설치(bf_boot_append/run) → 부트스트랩 전송(bf_boot_append…)
-                → 부트스트랩 실행(bf_boot_run) → 파일 반복(prepare_out → tmp_reset → tmp_append… → commit)
-                → 디코드(WriteAllBytes) → SHA-256 검증(Get-FileHash) → 정리(.tmp 삭제) → 완료
+              <div style="font-weight: 600; margin-bottom: 4px;" data-i18n="files.procedureSummaryTitle">Execution procedure (summary)</div>
+              <div data-i18n="files.procedureSummary">
+                PowerShell launch (Win+R) → console warmup/BF_READY → launcher install (bf_boot_append/run) → bootstrap send (bf_boot_append…) → bootstrap execute (bf_boot_run) → file loop (prepare_out → tmp_reset → tmp_append… → commit) → decode (WriteAllBytes) → SHA-256 verify (Get-FileHash) → cleanup (.tmp delete) → done
               </div>
-              <div style="margin-top: 6px;">
-                화면의 단계 표시 매핑: 준비(Win+R/워밍업/BF_READY) → 부트(런처+부트스트랩 설치) → 전송(Base64 청크 입력)
-                → 복원(WriteAllBytes) → 검증(Get-FileHash) → 정리(임시파일 삭제)
+              <div style="margin-top: 6px;" data-i18n="files.stageMapping">
+                Stage display mapping: Prepare (Win+R/warmup/BF_READY) → Boot (launcher+bootstrap install) → Send (Base64 chunk input) → Decode (WriteAllBytes) → Verify (Get-FileHash) → Cleanup (temp file delete)
               </div>
             </div>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
-              <li>Web Bluetooth는 Chrome/Edge에서만 동작합니다.</li>
-              <li>Target PC는 USB 키보드 장치를 허용해야 합니다.</li>
-              <li>검증은 SHA-256 필수이며, 불일치 시 즉시 중단합니다.</li>
-              <li>임시 Base64 파일은 targetDir\\.tmp\\bf_payload_&lt;auto&gt;.b64 로 자동 생성되며, 시작 전에 기존 임시파일을 삭제합니다.</li>
-              <li>targetDir가 존재하지 않으면 자동으로 폴더를 생성합니다.</li>
-              <li>보안 정책/쓰기 권한에 따라 실패할 수 있습니다.</li>
-              <li>진단 로그 옵션이 켜져 있으면 실패 시 targetDir\\.tmp\\bf_last_error.txt 가 생성될 수 있습니다.</li>
+              <li data-i18n="text.noteBluetooth">Web Bluetooth only works in Chrome/Edge.</li>
+              <li data-i18n="text.noteUSB">Target PC must allow USB keyboard devices.</li>
+              <li data-i18n="files.noteVerify">Verification uses SHA-256; mismatches stop immediately.</li>
+              <li data-i18n="files.noteTempFiles">Temporary Base64 files are auto-created as targetDir\.tmp\bf_payload_&lt;auto&gt;.b64; existing temp files are deleted before start.</li>
+              <li data-i18n="files.noteAutoDir">If targetDir does not exist, folders are created automatically.</li>
+              <li data-i18n="files.notePermission">May fail depending on security policy/write permissions.</li>
+              <li data-i18n="files.noteDiagLog">When diagnostic logging is enabled, targetDir\.tmp\bf_last_error.txt may be created on failure.</li>
             </ul>
           </section>
         </aside>
 
         <section class="main">
           <section class="card">
-            <h2 class="settingsTitle" style="margin-top: 0;">다중 파일 생성</h2>
-            <p class="muted small" style="margin-top: 6px;">
-              파일 1개 또는 폴더 1개를 선택하면, 선택한 구조 그대로 Target PC의 targetDir 아래에 파일을 생성합니다.
-              각 파일은 생성 후 SHA-256으로 무결성 검증을 수행하며, 불일치/실패가 발생하면 즉시 중단하고 오류로 표시합니다.
-              실행이 "완료"로 끝나고, 추가로 생성된 오류 리포트(targetDir\.tmp\bf_last_error.txt)가 없다면 생성된 파일은 오류가 없다고 보면 됩니다.
+            <h2 class="settingsTitle" style="margin-top: 0;" data-i18n="files.multiFileTitle">Multi-file Creation</h2>
+            <p class="muted small" style="margin-top: 6px;" data-i18n="files.multiFileDesc">
+              Select a single file or folder to create files on the Target PC under targetDir, preserving the selected structure. Each file is verified with SHA-256 after creation; mismatches/failures stop immediately with an error. If the run completes and no error report (targetDir\.tmp\bf_last_error.txt) is generated, the created files are error-free.
             </p>
 
             <div class="grid2" style="margin-top: 12px;">
-              <h2 class="settingsTitle" style="margin: 0; padding-top: 14px;">소스 선택</h2>
-              <p class="muted small" style="margin: -2px 0 0;">
-                Target PC에 <b>생성/입력할 파일(또는 폴더)</b>을 선택하세요.
+              <h2 class="settingsTitle" style="margin: 0; padding-top: 14px;" data-i18n="files.sourceSelect">Source Selection</h2>
+              <p class="muted small" style="margin: -2px 0 0;" data-i18n-html="files.sourceSelectHint">
+                Select <b>file(s) or folder</b> to create on the Target PC.
               </p>
 
               <div class="row">
-                <button id="btnPickFile" type="button" class="controlButton">파일 선택</button>
-                <button id="btnPickFolder" type="button" class="controlButton">폴더 선택</button>
+                <button id="btnPickFile" type="button" class="controlButton" data-i18n="files.selectFile">Select File</button>
+                <button id="btnPickFolder" type="button" class="controlButton" data-i18n="files.selectFolder">Select Folder</button>
 
-                <!-- 숨김 입력: 버튼으로만 트리거한다 -->
+                <!-- Hidden inputs: triggered by buttons only -->
                 <input id="fileInput" type="file" style="display: none;" />
                 <input id="folderInput" type="file" webkitdirectory multiple style="display: none;" />
               </div>
 
               <div class="muted small" style="margin-top: 4px;">
-                <div><span class="label">선택된 항목</span> <span id="filesSummary">-</span></div>
+                <div><span class="label" data-i18n="files.selectedItems">Selected items</span> <span id="filesSummary">-</span></div>
                 <div class="muted small" id="filesDetails" style="margin-top: 4px; white-space: pre-wrap;"></div>
               </div>
 
-              <h2 class="settingsTitle" style="margin: 0; padding-top: 18px;">타겟 시스템 선택</h2>
+              <h2 class="settingsTitle" style="margin: 0; padding-top: 18px;" data-i18n="files.targetSystemSelect">Target System</h2>
               <div class="row" id="targetSystemRow">
                 <label class="controlOption">
                   <input type="radio" name="targetSystem" value="windows" checked />
-                  Windows
+                  <span data-i18n="files.targetSystemWindows">Windows</span>
                 </label>
                 <label class="controlOption">
                   <input type="radio" name="targetSystem" value="mac" disabled />
-                  macOS (준비중)
+                  <span data-i18n="files.macOSComingSoon">macOS (coming soon)</span>
                 </label>
                 <label class="controlOption">
                   <input type="radio" name="targetSystem" value="linux" disabled />
-                  Linux (준비중)
+                  <span data-i18n="files.linuxComingSoon">Linux (coming soon)</span>
                 </label>
               </div>
 
-              <h2 class="settingsTitle" style="margin: 0; padding-top: 18px;">타겟 디렉토리 선택</h2>
-              <p class="muted small" style="margin: -2px 0 0;">
-                Target PC에 파일을 생성/입력할 <b>디렉토리</b>를 입력하세요.
+              <h2 class="settingsTitle" style="margin: 0; padding-top: 18px;" data-i18n="files.targetDirSelect">Target Directory</h2>
+              <p class="muted small" style="margin: -2px 0 0;" data-i18n-html="files.targetDirHint">
+                Enter the <b>directory</b> on the Target PC where files will be created.
               </p>
-              <input id="targetDir" class="textField" type="text" value="C:\\byteflusher" placeholder="예: C:\\Users\\me\\Documents\\byteflusher_out" />
+              <input id="targetDir" class="textField" type="text" value="C:\\byteflusher" placeholder="e.g. C:\\Users\\me\\Documents\\byteflusher_out" data-i18n-placeholder="files.targetDirPlaceholder" />
               <div id="targetDirValidityFiles" class="muted small validityLine" aria-live="polite"></div>
-              <p class="muted small" style="margin: -2px 0 0;">
-                영문(ASCII)만, 공백 불가. (권한 문제를 피하려면 사용자 폴더 하위 권장)
+              <p class="muted small" style="margin: -2px 0 0;" data-i18n="files.targetDirAsciiHint">
+                ASCII only, no spaces. (Recommended: use a path under user folder to avoid permission issues)
               </p>
             </div>
 
             <div class="row" style="margin-top: 24px;">
-              <button id="btnStartFiles" class="primary controlButton" disabled>Start (Files)</button>
-              <button id="btnPauseFiles" class="controlButton" disabled>Pause</button>
-              <button id="btnResumeFiles" class="controlButton" disabled>Resume</button>
-              <button id="btnStopFiles" class="danger controlButton" disabled>Stop</button>
+              <button id="btnStartFiles" class="primary controlButton" disabled data-i18n="common.startFiles">Start (Files)</button>
+              <button id="btnPauseFiles" class="controlButton" disabled data-i18n="common.pause">Pause</button>
+              <button id="btnResumeFiles" class="controlButton" disabled data-i18n="common.resume">Resume</button>
+              <button id="btnStopFiles" class="danger controlButton" disabled data-i18n="common.stop">Stop</button>
             </div>
 
             <div class="muted small" id="startHint" style="margin-top: 8px;"></div>
@@ -323,39 +316,39 @@
 
             <div id="jobMetricsFiles" class="jobMetrics" aria-live="polite" style="margin-top: 10px;">
               <div class="jobLine">
-                <span class="jobKey">예상</span>
+                <span class="jobKey" data-i18n="metric.estimate">ETA</span>
                 <span id="etaTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">시작</span>
+                <span class="jobKey" data-i18n="metric.startTime">Start</span>
                 <span id="startTimeTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">파일</span>
+                <span class="jobKey" data-i18n="metric.files">Files</span>
                 <span id="fileCountTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">바이트</span>
+                <span class="jobKey" data-i18n="metric.bytes">Bytes</span>
                 <span id="totalBytesTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">단계</span>
+                <span class="jobKey" data-i18n="metric.stage">Stage</span>
                 <span id="stageTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">경과</span>
+                <span class="jobKey" data-i18n="metric.elapsed">Elapsed</span>
                 <span id="elapsedTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">완료율</span>
+                <span class="jobKey" data-i18n="metric.progress">Progress</span>
                 <span id="progressTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">종료</span>
+                <span class="jobKey" data-i18n="metric.endTime">End</span>
                 <span id="endTimeTextFiles" class="muted small">-</span>
               </div>
               <div class="jobLine jobLineWide">
-                <span class="jobKey">기준</span>
+                <span class="jobKey" data-i18n="metric.basis">Basis</span>
                 <span id="estimateBasisTextFiles" class="muted small">-</span>
               </div>
             </div>

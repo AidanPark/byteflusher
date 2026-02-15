@@ -4,6 +4,8 @@
 // - Automation: Win+R -> PowerShell launch, then command typing via HID
 // - Bootstrap: launch PowerShell with -EncodedCommand (define helper functions), then send Base64 chunks
 
+import { initI18n, t, getLocale } from './i18n.js';
+
 // BLE UUIDs must match firmware(src/main.cpp)
 // 연결 방식은 기존(보안 서비스 UUID) 1개만 사용한다.
 const SERVICE_UUID = 'f3641400-00b0-4240-ba50-05ca45bf8abc';
@@ -110,9 +112,7 @@ let filesSettingsToastTimerId = null;
 // selection state
 let selectedKind = null; // 'file' | 'folder' | null
 let selectedSummary = { title: '-', details: '' };
-
-const kDefaultFileButtonText = '파일 선택';
-const kDefaultFolderButtonText = '폴더 선택';
+let selectedHasError = false;
 
 const kDefaultTargetDir = 'C:\\byteflusher';
 
@@ -123,16 +123,16 @@ const kFilesSettingsStorageKeyLegacy = 'byteflusher_files_settings_v1';
 const kDefaultFilesSettings = Object.freeze({
   // Accuracy-first defaults (PowerShell + HID typing is sensitive)
   // Per-character timing
-  typingDelayMs: 10,
-  keyPressDelayMs: 10,
+  typingDelayMs: 2,
+  keyPressDelayMs: 2,
 
   // Legacy (pre-v3): when present in saved settings, used for migration only.
   keyDelayMs: 10,
   lineDelayMs: 20,
   commandDelayMs: 50,
   // Bootstrap is more sensitive than data transfer; keep it short by default.
-  bootChunkChars: 200,
-  chunkChars: 1200,
+  bootChunkChars: 2000,
+  chunkChars: 2000,
   chunkDelayMs: 20,
   overwritePolicy: 'fail', // 'fail' | 'overwrite' | 'backup'
 
@@ -310,8 +310,8 @@ function createBleTextTx() {
 }
 
 async function txSendBytesWithFlowControl(tx, bytes, { chunkSize = 20, delayMs = 0 } = {}) {
-  if (!flushChar) throw new Error('flush characteristic이 없습니다.');
-  if (!tx) throw new Error('tx가 없습니다.');
+  if (!flushChar) throw new Error(t('error.noFlushCharShort'));
+  if (!tx) throw new Error(t('error.noTx'));
   let offset = 0;
 
   while (offset < bytes.length) {
@@ -320,7 +320,7 @@ async function txSendBytesWithFlowControl(tx, bytes, { chunkSize = 20, delayMs =
       await sleep(120);
       continue;
     }
-    if (!device?.gatt?.connected) throw new Error('BLE 연결이 끊어졌습니다.');
+    if (!device?.gatt?.connected) throw new Error(t('error.bleDisconnected'));
 
     const chunk = bytes.slice(offset, offset + chunkSize);
     const maxBacklogBytes = Math.max(32, chunkSize);
@@ -404,9 +404,9 @@ function splitStringIntoChunks(s, chunkLen) {
 }
 
 async function macroWrite(cmd, payloadBytes) {
-  if (!macroChar) throw new Error('macro characteristic이 없습니다(펌웨어 업데이트 필요).');
+  if (!macroChar) throw new Error(t('error.noMacroChar'));
   while (paused && !stopRequested) await sleep(120);
-  if (stopRequested) throw new Error('사용자 중지');
+  if (stopRequested) throw new Error(t('status.userStopped'));
   const payload = payloadBytes ? new Uint8Array(payloadBytes) : new Uint8Array(0);
   if (payload.length > 255) throw new Error('macro payload too large');
   const buf = new Uint8Array(2 + payload.length);
@@ -585,7 +585,7 @@ function applyFilesSettings() {
   applyFilesSettingsToUi(cfg); // clamp & reflect
   saveFilesSettings(cfg);
   console.log('[files] settings applied', cfg);
-  showFilesSettingsToast('저장됨', 1000);
+  showFilesSettingsToast(t('toast.saved'), 1000);
   updateStartEnabled();
 }
 
@@ -594,7 +594,7 @@ function resetFilesSettings() {
   applyFilesSettingsToUi(cfg);
   saveFilesSettings(cfg);
   console.log('[files] settings reset', cfg);
-  showFilesSettingsToast('초기화됨', 1000);
+  showFilesSettingsToast(t('toast.reset'), 1000);
   updateStartEnabled();
 }
 
@@ -660,14 +660,14 @@ async function readDeviceNicknameOnce() {
 
 async function writeDeviceNickname(nickname) {
   if (!nicknameChar) {
-    setStatus('오류', '닉네임 특성을 찾지 못했습니다. 펌웨어를 업데이트한 뒤 다시 연결하세요.');
+    setStatus(t('status.error'), t('error.noNicknameChar'));
     return;
   }
 
   const raw = String(nickname ?? '').trim();
   const s = sanitizeNickname(raw);
   if (raw && !s) {
-    setStatus('오류', '닉네임은 영문/숫자/-/_만 가능합니다. (한/영 전환 상태를 확인하세요)');
+    setStatus(t('status.error'), t('error.nicknameInvalid'));
     return;
   }
   try {
@@ -678,9 +678,9 @@ async function writeDeviceNickname(nickname) {
     }
     saveNicknameToLocalStorage(s);
     setNicknameUiValue(s);
-    setStatus('연결됨', `닉네임 저장됨: ${s || '(없음)'}`);
+    setStatus(t('status.connected'), t('status.nicknameSaved', { name: s || '-' }));
   } catch (err) {
-    setStatus('오류', `닉네임 저장 실패: ${String(err?.message ?? err ?? '')}`);
+    setStatus(t('status.error'), t('status.nicknameSaveFailed', { msg: String(err?.message ?? err ?? '') }));
   }
 }
 
@@ -744,24 +744,26 @@ function computeSelectionStats() {
 }
 
 function computeStartChecklist() {
-  const compactReadinessHint = (hint) => {
-    const s = String(hint ?? '').trim();
-    if (!s) return '조건 불충족';
-    if (s.includes('장치를 먼저 연결')) return '장치 연결 필요';
-    if (s.includes('Windows만')) return 'Windows만 지원';
-    if (s.includes('대상 디렉토리')) return '대상 디렉토리 오류';
-    if (s.includes('파일 또는 폴더를 선택')) return '소스 선택 필요';
-    if (s.includes('선택 오류')) return '소스 선택 오류';
-    if (s.includes('단일 파일이 너무 큽니다')) return '단일 파일 용량 초과';
-    if (s.includes('전체 용량이 너무 큽니다')) return '전체 용량 초과';
-    if (s.includes('청크 길이')) return '청크 설정 오류';
-    return s;
+  const compactReadinessHint = (hintKey) => {
+    if (!hintKey) return t('files.compactConditionNotMet');
+    const map = {
+      connectFirst: t('files.compactConnectNeeded'),
+      windowsOnly: t('files.compactWindowsOnly'),
+      targetDirInvalid: t('files.compactTargetDirError'),
+      selectSource: t('files.compactSourceNeeded'),
+      selectionError: t('files.compactSelectionError'),
+      singleFileTooLarge: t('files.compactSingleFileTooLarge'),
+      totalTooLarge: t('files.compactTotalTooLarge'),
+      chunkCharsRange: t('files.compactChunkError'),
+      bootChunkCharsRange: t('files.compactChunkError'),
+    };
+    return map[hintKey] || t('files.compactConditionNotMet');
   };
 
   const isConnected = Boolean(device?.gatt?.connected);
   const targetSystem = getSelectedTargetSystem();
   const dirOk = isValidWindowsAbsolutePath(els.targetDir?.value ?? '');
-  const sourceOk = selectedKind != null && selectedSummary?.title !== '오류';
+  const sourceOk = selectedKind != null && !selectedHasError;
   const notRunning = !running;
   const ready = computeStartReadiness();
 
@@ -771,38 +773,38 @@ function computeStartChecklist() {
 
   const sourceLabel =
     selectedKind === 'file'
-      ? '소스: 파일 1개 선택'
+      ? t('files.checkSourceFile')
       : selectedKind === 'folder'
-        ? '소스: 폴더 1개 선택'
-        : '소스: 파일/폴더 선택 필요';
+        ? t('files.checkSourceFolder')
+        : t('files.checkSourceNeeded');
 
   return [
-    { ok: isConnected, label: isConnected ? '장치 연결됨' : '장치 연결 필요' },
-    { ok: targetSystem === 'windows', label: targetSystem === 'windows' ? '타겟 시스템: Windows' : '타겟 시스템: Windows 선택 필요' },
-    { ok: dirOk, label: dirOk ? '타겟 디렉토리: OK' : '타겟 디렉토리: 절대경로(ASCII, 공백 불가) 필요' },
+    { ok: isConnected, label: isConnected ? t('files.checkDeviceConnected') : t('files.checkDeviceNeeded') },
+    { ok: targetSystem === 'windows', label: targetSystem === 'windows' ? t('files.checkTargetWindows') : t('files.checkTargetWindowsNeeded') },
+    { ok: dirOk, label: dirOk ? t('files.checkTargetDirOk') : t('files.checkTargetDirInvalid') },
     { ok: sourceOk, label: sourceLabel },
     {
       ok: singleOk,
       label:
         stats.fileCount === 0
-          ? `단일 파일 크기 제한: ${formatBytes(kMaxSingleFileBytes)} 이하`
-          : `단일 파일 크기: ${formatBytes(stats.maxFileBytes)} / 제한 ${formatBytes(kMaxSingleFileBytes)}`,
+          ? t('files.checkSingleSizeLimit', { limit: formatBytes(kMaxSingleFileBytes) })
+          : t('files.checkSingleSize', { size: formatBytes(stats.maxFileBytes), limit: formatBytes(kMaxSingleFileBytes) }),
     },
     {
       ok: totalOk,
       label:
         stats.fileCount === 0
-          ? `전체 용량 제한: ${formatBytes(kMaxTotalBytes)} 이하`
-          : `전체 용량: ${formatBytes(stats.totalBytes)} / 제한 ${formatBytes(kMaxTotalBytes)}`,
+          ? t('files.checkTotalSizeLimit', { limit: formatBytes(kMaxTotalBytes) })
+          : t('files.checkTotalSize', { size: formatBytes(stats.totalBytes), limit: formatBytes(kMaxTotalBytes) }),
     },
     {
       ok: ready.ok,
       label:
         running
-          ? '상태: 실행 중(Stop 후 Start 가능)'
+          ? t('files.checkRunning')
           : ready.ok
-            ? '상태: 시작 가능'
-            : `상태: 시작 불가 (${compactReadinessHint(ready.hint)})`,
+            ? t('files.checkReady')
+            : t('files.checkNotReady', { reason: compactReadinessHint(ready.hintKey) }),
     },
   ];
 }
@@ -826,12 +828,12 @@ function isAllAsciiNoSpace(s) {
 
 function getWindowsAbsolutePathValidity(s) {
   const v = String(s ?? '').trim();
-  if (!v) return { ok: false, reason: '필수' };
-  if (!isAllAsciiNoSpace(v)) return { ok: false, reason: 'ASCII만/공백불가' };
+  if (!v) return { ok: false, reason: t('files.targetDirRequired') };
+  if (!isAllAsciiNoSpace(v)) return { ok: false, reason: t('files.targetDirAsciiOnly') };
 
   // Very strict per policy: drive absolute path only (e.g., C:\Users\me)
   // (UNC paths intentionally excluded for simplicity/accuracy)
-  if (!/^[A-Za-z]:\\/.test(v)) return { ok: false, reason: '예: C:\\Users\\me\\out' };
+  if (!/^[A-Za-z]:\\/.test(v)) return { ok: false, reason: t('files.targetDirExample') };
 
   return { ok: true, reason: '' };
 }
@@ -871,7 +873,7 @@ function formatBytes(bytes) {
 function renderStageText() {
   if (!job) return '-';
   const stage = String(job.stage ?? '').trim() || '-';
-  if (paused) return `${stage} (일시정지)`;
+  if (paused) return `${stage} ${t('metric.pausedSuffix')}`;
   return stage;
 }
 
@@ -889,14 +891,7 @@ function showFilesSettingsToast(text, ttlMs = 1000) {
   }, Math.max(200, Number(ttlMs) || 1000));
 }
 
-const kStages = Object.freeze({
-  prepare: '준비',
-  bootstrap: '부트',
-  sendChunks: '전송',
-  decode: '복원',
-  verifyHash: '검증',
-  cleanup: '정리',
-});
+function getStageLabel(key) { return t(`files.stages.${key}`); }
 
 function setJobStage(stage, { statusText, statusDetails } = {}) {
   if (!job) return;
@@ -908,27 +903,27 @@ function setJobStage(stage, { statusText, statusDetails } = {}) {
 }
 
 function stagePrepare() {
-  setJobStage(kStages.prepare);
+  setJobStage(getStageLabel('prepare'));
 }
 
 function stageBootstrap() {
-  setJobStage(kStages.bootstrap);
+  setJobStage(getStageLabel('bootstrap'));
 }
 
 function stageSendChunks() {
-  setJobStage(kStages.sendChunks);
+  setJobStage(getStageLabel('sendChunks'));
 }
 
 function stageDecode() {
-  setJobStage(kStages.decode);
+  setJobStage(getStageLabel('decode'));
 }
 
 function stageVerifyHash() {
-  setJobStage(kStages.verifyHash);
+  setJobStage(getStageLabel('verifyHash'));
 }
 
 function stageCleanup() {
-  setJobStage(kStages.cleanup);
+  setJobStage(getStageLabel('cleanup'));
 }
 
 function u8ToBinaryString(u8) {
@@ -1058,7 +1053,7 @@ function setUiRunState({ isRunning, isPaused }) {
 
 function formatWallClock(ts) {
   if (!Number.isFinite(ts)) return '-';
-  return new Date(ts).toLocaleString('ko-KR', {
+  return new Date(ts).toLocaleString(getLocale(), {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -1152,7 +1147,7 @@ function updatePreStartMetrics() {
   if (running) return;
   if (job) return;
 
-  if (selectedKind == null || selectedSummary?.title === '오류') {
+  if (selectedKind == null || selectedHasError) {
     clearJobMetrics();
     return;
   }
@@ -1188,7 +1183,7 @@ function updatePreStartMetrics() {
   if (els.elapsedTextFiles) els.elapsedTextFiles.textContent = '-';
   if (els.stageTextFiles) els.stageTextFiles.textContent = '-';
 
-  if (els.fileCountTextFiles) els.fileCountTextFiles.textContent = `${fileCount}개`;
+  if (els.fileCountTextFiles) els.fileCountTextFiles.textContent = t('metric.nItems', { n: fileCount });
   if (els.totalBytesTextFiles) els.totalBytesTextFiles.textContent = `${formatBytes(totalBytes)} (${totalBytes} bytes)`;
 
   if (els.progressTextFiles) els.progressTextFiles.textContent = '-';
@@ -1551,7 +1546,7 @@ function startJobMetrics({ totalBytes, fileCount, kind, targetDir, targetSystem,
     endedWallMs: null,
     totalBytes: Math.max(0, Number(totalBytes) || 0),
     sentBytes: 0,
-    stage: '준비',
+    stage: getStageLabel('prepare'),
     intervalId: null,
     initialEtaMs,
     lastEtaText: initialEtaMs ? formatDuration(initialEtaMs) : null,
@@ -1564,7 +1559,7 @@ function startJobMetrics({ totalBytes, fileCount, kind, targetDir, targetSystem,
   };
 
   if (els.startTimeTextFiles) els.startTimeTextFiles.textContent = formatWallClock(job.startedWallMs);
-  if (els.fileCountTextFiles) els.fileCountTextFiles.textContent = `${fileCount}개`;
+  if (els.fileCountTextFiles) els.fileCountTextFiles.textContent = t('metric.nItems', { n: fileCount });
   if (els.totalBytesTextFiles) els.totalBytesTextFiles.textContent = `${formatBytes(job.totalBytes)} (${job.totalBytes} bytes)`;
   if (els.stageTextFiles) els.stageTextFiles.textContent = renderStageText();
   if (els.endTimeTextFiles) els.endTimeTextFiles.textContent = '-';
@@ -1586,7 +1581,7 @@ function startJobMetrics({ totalBytes, fileCount, kind, targetDir, targetSystem,
 
 function finishJobMetrics() {
   if (!job) return;
-  job.stage = '정리';
+  job.stage = getStageLabel('cleanup');
   if (job.endedWallMs == null) job.endedWallMs = Date.now();
   if (job.intervalId) {
     clearInterval(job.intervalId);
@@ -1598,17 +1593,18 @@ function finishJobMetrics() {
 
 function resetFileSelection() {
   if (els.fileInput) els.fileInput.value = '';
-  if (els.btnPickFile) els.btnPickFile.textContent = kDefaultFileButtonText;
+  if (els.btnPickFile) els.btnPickFile.textContent = t('files.selectFile');
 }
 
 function resetFolderSelection() {
   if (els.folderInput) els.folderInput.value = '';
-  if (els.btnPickFolder) els.btnPickFolder.textContent = kDefaultFolderButtonText;
+  if (els.btnPickFolder) els.btnPickFolder.textContent = t('files.selectFolder');
 }
 
 function clearSelection() {
   selectedKind = null;
   selectedSummary = { title: '-', details: '' };
+  selectedHasError = false;
   setSummary(selectedSummary.title, selectedSummary.details);
 }
 
@@ -1629,10 +1625,11 @@ function onFilePicked() {
   // single file only
   const f = files[0];
   selectedKind = 'file';
-  selectedSummary = { title: '파일 1개', details: `${f.name} (${formatBytes(f.size)} / ${f.size} bytes)` };
+  selectedHasError = false;
+  selectedSummary = { title: t('files.oneFile'), details: `${f.name} (${formatBytes(f.size)} / ${f.size} bytes)` };
 
   const label = shortLabel(f.name, 24);
-  if (els.btnPickFile) els.btnPickFile.textContent = `파일 변경 (${label})`;
+  if (els.btnPickFile) els.btnPickFile.textContent = t('files.changeFile', { label });
 
   // mutually exclusive
   resetFolderSelection();
@@ -1657,7 +1654,8 @@ function onFolderPicked() {
   const root = first.split('/')[0] || '';
   if (!root) {
     selectedKind = null;
-    selectedSummary = { title: '오류', details: '폴더 구조를 읽을 수 없습니다. Chrome/Edge에서 시도하세요.' };
+    selectedHasError = true;
+    selectedSummary = { title: t('files.errorTitle'), details: t('error.folderStructure') };
     updateSelectionUi();
     if (!running) clearJobState();
     updateStartEnabled();
@@ -1667,7 +1665,8 @@ function onFolderPicked() {
   const differentRoot = paths.some((p) => (p.split('/')[0] || '') !== root);
   if (differentRoot) {
     selectedKind = null;
-    selectedSummary = { title: '오류', details: '폴더 선택은 최상위 폴더 1개만 허용합니다.' };
+    selectedHasError = true;
+    selectedSummary = { title: t('files.errorTitle'), details: t('error.folderSingleRoot') };
     updateSelectionUi();
     if (!running) clearJobState();
     updateStartEnabled();
@@ -1675,14 +1674,15 @@ function onFolderPicked() {
   }
 
   selectedKind = 'folder';
+  selectedHasError = false;
   const stats = computeSelectionStats();
   selectedSummary = {
-    title: '폴더 1개',
+    title: t('files.oneFolder'),
     details: `${root} (files: ${files.length} / total: ${formatBytes(stats.totalBytes)} / max: ${formatBytes(stats.maxFileBytes)})`,
   };
 
   const label = shortLabel(root, 24);
-  if (els.btnPickFolder) els.btnPickFolder.textContent = `폴더 변경 (${label})`;
+  if (els.btnPickFolder) els.btnPickFolder.textContent = t('files.changeFolder', { label });
 
   // mutually exclusive
   resetFileSelection();
@@ -1694,36 +1694,37 @@ function onFolderPicked() {
 
 function computeStartReadiness() {
   const isConnected = Boolean(device?.gatt?.connected);
-  if (!isConnected) return { ok: false, hint: '장치를 먼저 연결하세요.' };
-  if (running) return { ok: false, hint: '' };
+  if (!isConnected) return { ok: false, hint: t('files.hintConnectFirst'), hintKey: 'connectFirst' };
+  if (running) return { ok: false, hint: '', hintKey: '' };
 
   const targetSystem = getSelectedTargetSystem();
-  if (targetSystem !== 'windows') return { ok: false, hint: '현재는 Windows만 지원합니다.' };
+  if (targetSystem !== 'windows') return { ok: false, hint: t('files.hintWindowsOnly'), hintKey: 'windowsOnly' };
 
   // Settings sanity checks (accuracy first)
   const cfg = getFilesSettingsFromUi();
-  if (cfg.chunkChars < 200 || cfg.chunkChars > 10000) return { ok: false, hint: '청크 길이(Chars)는 200~10000 사이로 설정하세요.' };
-  if (cfg.bootChunkChars < 50 || cfg.bootChunkChars > 4000) return { ok: false, hint: '부트스트랩 청크 길이(Chars)는 50~4000 사이로 설정하세요.' };
+  if (cfg.chunkChars < 200 || cfg.chunkChars > 10000) return { ok: false, hint: t('files.hintChunkCharsRange'), hintKey: 'chunkCharsRange' };
+  if (cfg.bootChunkChars < 50 || cfg.bootChunkChars > 4000) return { ok: false, hint: t('files.hintBootChunkCharsRange'), hintKey: 'bootChunkCharsRange' };
   const dirValidity = getWindowsAbsolutePathValidity(els.targetDir?.value ?? '');
-  if (!dirValidity.ok) return { ok: false, hint: `대상 디렉토리: INVALID (${dirValidity.reason})` };
+  if (!dirValidity.ok) return { ok: false, hint: t('files.hintTargetDirInvalid', { reason: dirValidity.reason }), hintKey: 'targetDirInvalid' };
 
-  if (selectedKind == null) return { ok: false, hint: '파일 또는 폴더를 선택하세요.' };
-  if (selectedSummary?.title === '오류') return { ok: false, hint: '선택 오류를 먼저 해결하세요.' };
+  if (selectedKind == null) return { ok: false, hint: t('files.hintSelectSource'), hintKey: 'selectSource' };
+  if (selectedHasError) return { ok: false, hint: t('files.hintSelectionError'), hintKey: 'selectionError' };
 
   const stats = computeSelectionStats();
-  if (stats.fileCount <= 0) return { ok: false, hint: '파일 또는 폴더를 선택하세요.' };
+  if (stats.fileCount <= 0) return { ok: false, hint: t('files.hintSelectSource'), hintKey: 'selectSource' };
   if (stats.maxFileBytes > kMaxSingleFileBytes) {
     const label = stats.maxFileLabel ? ` (${stats.maxFileLabel})` : '';
     return {
       ok: false,
-      hint: `단일 파일이 너무 큽니다${label}: ${formatBytes(stats.maxFileBytes)} / 제한 ${formatBytes(kMaxSingleFileBytes)}`,
+      hint: t('files.hintSingleFileTooLarge', { label, size: formatBytes(stats.maxFileBytes), limit: formatBytes(kMaxSingleFileBytes) }),
+      hintKey: 'singleFileTooLarge',
     };
   }
   if (stats.totalBytes > kMaxTotalBytes) {
-    return { ok: false, hint: `전체 용량이 너무 큽니다: ${formatBytes(stats.totalBytes)} / 제한 ${formatBytes(kMaxTotalBytes)}` };
+    return { ok: false, hint: t('files.hintTotalTooLarge', { size: formatBytes(stats.totalBytes), limit: formatBytes(kMaxTotalBytes) }), hintKey: 'totalTooLarge' };
   }
 
-  return { ok: true, hint: '' };
+  return { ok: true, hint: '', hintKey: '' };
 }
 
 function updateStartEnabled() {
@@ -1746,9 +1747,9 @@ function handleDisconnected() {
   if (wasRunning && !stopRequested) {
     // 전송(실행) 중 연결이 끊긴 경우에만 "연결 끊김"으로 표시한다.
     // 유휴 상태에서는 항상 "연결 안 됨"을 유지한다.
-    setStatus('연결 끊김', wasPaused ? '일시정지 중 연결 끊김' : '전송 중 연결 끊김');
+    setStatus(t('status.connectionLost'), wasPaused ? t('status.connectionLostWhilePaused') : t('status.connectionLostWhileTransfer'));
   } else {
-    setStatus('연결 안 됨', '');
+    setStatus(t('status.disconnected'), '');
   }
   device = null;
   server = null;
@@ -1775,29 +1776,26 @@ function getConnectFailureHelpText(err) {
   const msg = (err?.message ?? String(err ?? '')).toString();
 
   if (/No\s+Characteristics\s+matching\s+UUID/i.test(msg) || /No\s+Services\s+matching\s+UUID/i.test(msg)) {
-    return [
-      '장치의 GATT 특성을 찾지 못했습니다(펌웨어/웹 UI 버전 불일치 가능).',
-      '보드에 최신 펌웨어를 업로드한 뒤 페이지를 새로고침하고 다시 연결하세요.',
-    ].join(' ');
+    return t('error.gattNotFound');
   }
 
   if (name === 'NotSupportedError') {
-    return '이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).';
+    return t('error.notSupported');
   }
 
   if (name === 'NotAllowedError') {
-    return '권한이 거부되었습니다. 장치 선택/권한 팝업에서 허용한 뒤 다시 시도하세요.';
+    return t('error.notAllowed');
   }
 
-  return `연결에 실패했습니다. ${msg}`;
+  return t('error.connectFailed', { msg });
 }
 
 async function connect() {
   if (!navigator.bluetooth) {
-    throw new Error('이 브라우저는 Web Bluetooth를 지원하지 않습니다(Chrome/Edge 권장).');
+    throw new Error(t('error.notSupported'));
   }
 
-  setStatus('장치 선택 중...', 'BLE 장치 선택 팝업을 확인하세요.');
+  setStatus(t('status.selectingDevice'), t('status.selectDevicePopup'));
 
   const requestOptions = {
     filters: [{ services: [SERVICE_UUID] }, { namePrefix: 'ByteFlusher' }],
@@ -1810,7 +1808,7 @@ async function connect() {
   } catch (err) {
     const name = (err?.name ?? '').toString();
     if (name === 'NotFoundError') {
-      setStatus('연결 안 됨', '');
+      setStatus(t('status.disconnected'), '');
       handleDisconnected();
       return;
     }
@@ -1818,7 +1816,7 @@ async function connect() {
   }
   d.addEventListener('gattserverdisconnected', handleDisconnected);
 
-  setStatus('연결 중...', d.name || '');
+  setStatus(t('status.connecting'), d.name || '');
   let s;
   let service;
   let fc;
@@ -1841,7 +1839,7 @@ async function connect() {
       nc = null;
     }
   } catch (err) {
-    setStatus('연결 실패', getConnectFailureHelpText(err));
+    setStatus(t('status.connectionFailed'), getConnectFailureHelpText(err));
     device = null;
     server = null;
     flushChar = null;
@@ -1885,7 +1883,7 @@ async function connect() {
     setNicknameUiValue(deviceNick || fallback);
   }
 
-  setStatus('연결됨', `${d.name || 'ByteFlusher'} / ${SERVICE_UUID}`);
+  setStatus(t('status.connected'), `${d.name || 'ByteFlusher'} / ${SERVICE_UUID}`);
   setUiRunState({ isRunning: false, isPaused: false });
   updateStartEnabled();
 
@@ -1895,30 +1893,28 @@ async function connect() {
 
 async function requestBootloader() {
   if (!bootloaderChar) {
-    setStatus('오류', '먼저 장치를 연결하세요.');
+    setStatus(t('status.error'), t('error.connectDevice'));
     return;
   }
   if (running || paused) {
-    setStatus('오류', '전송 중에는 부트로더 진입을 할 수 없습니다. Stop 후 다시 시도하세요.');
+    setStatus(t('status.error'), t('error.bootloaderDuringTransfer'));
     return;
   }
 
-  const ok = confirm(
-    '부트로더(펌웨어 업로드) 모드로 재부팅합니다.\n\n- 잠시 후 BLE 연결이 끊깁니다.\n- 업로드용 COM 포트가 나타납니다.\n\n계속할까요?',
-  );
+  const ok = confirm(t('confirm.bootloaderFiles'));
   if (!ok) return;
 
-  setStatus('재부팅 요청...', '부트로더 진입 중');
+  setStatus(t('status.rebootRequesting'), t('status.rebootEntering'));
   try {
     await bootloaderChar.writeValue(Uint8Array.of(1));
   } catch (err) {
-    setStatus('실패', `부트로더 요청 실패: ${String(err?.message ?? err ?? '')}`);
+    setStatus(t('status.failed'), t('error.bootloaderRequestFailed', { msg: String(err?.message ?? err ?? '') }));
   }
 }
 
 async function disconnect() {
   if (!device?.gatt?.connected) return;
-  setStatus('연결 해제 중...', '');
+  setStatus(t('status.disconnecting'), '');
   try {
     device.gatt.disconnect();
   } catch {
@@ -1929,19 +1925,19 @@ async function disconnect() {
 
 async function startRun() {
   if (!flushChar) {
-    setStatus('오류', '먼저 장치를 연결하세요.');
+    setStatus(t('status.error'), t('error.connectDevice'));
     return;
   }
 
   const ready = computeStartReadiness();
   if (!ready.ok) {
-    setStatus('준비 필요', ready.hint);
+    setStatus(t('status.readyRequired'), ready.hint);
     return;
   }
 
   stopRequested = false;
   setUiRunState({ isRunning: true, isPaused: false });
-  setStatus('실행 중', renderStageText());
+  setStatus(t('status.running'), renderStageText());
 
   // 최소한의 작업정보(파일/폴더, 크기, 시작/경과)를 표시한다.
   const dir = String(els.targetDir?.value ?? '').trim();
@@ -1989,7 +1985,7 @@ async function startRun() {
     stagePrepare();
 
     if (!macroChar) {
-      throw new Error('macro characteristic이 없습니다. (펌웨어 업데이트 필요)');
+      throw new Error(t('error.noMacroChar'));
     }
 
     // Configure device delays for accuracy.
@@ -2007,7 +2003,7 @@ async function startRun() {
     });
 
     // Open PowerShell via Run dialog (Win+R) and wait for prompt.
-    setStatus('실행 중', 'PowerShell 실행');
+    setStatus(t('status.running'), t('status.psLaunching'));
     await macroEsc();
     await sleep(40);
     await macroEsc();
@@ -2037,12 +2033,12 @@ async function startRun() {
       if (stopRequested) break;
       await psLine(tx, '', { commandDelayMs: warmDelay });
     }
-    if (stopRequested) throw new Error('사용자 중지');
+    if (stopRequested) throw new Error(t('status.userStopped'));
     await psLine(tx, `Write-Host 'BF_READY_${runToken}'`, { commandDelayMs: cfg.commandDelayMs, guard: 'strong' });
 
     // Send the (potentially large) bootstrap encoded command in chunks, then execute via IEX.
     stageBootstrap();
-    setStatus('실행 중', '부트스트랩 전송');
+    setStatus(t('status.running'), t('status.bootstrapSending'));
 
     // Install the chunk launcher inside PowerShell (psLine uses BLE text channel and is chunked).
     const launcherLines = buildBootstrapChunkLauncherLines({ runToken, targetDir: dir });
@@ -2054,7 +2050,7 @@ async function startRun() {
       const delayMs = trimmed.startsWith('function ') || trimmed === '}' ? cfg.commandDelayMs : cfg.lineDelayMs;
       await psLine(tx, line, { commandDelayMs: delayMs, guard: 'strong' });
     }
-    if (stopRequested) throw new Error('사용자 중지');
+    if (stopRequested) throw new Error(t('status.userStopped'));
 
     const bootstrapScript = buildBootstrapScript({
       targetDir: dir,
@@ -2072,7 +2068,7 @@ async function startRun() {
       await psLine(tx, `bf_boot_append '${bootChunks[i]}'`, { commandDelayMs: cfg.lineDelayMs });
       if (cfg.chunkDelayMs > 0) await sleep(cfg.chunkDelayMs);
     }
-    if (stopRequested) throw new Error('사용자 중지');
+    if (stopRequested) throw new Error(t('status.userStopped'));
     await psLine(tx, 'bf_boot_run', { commandDelayMs: cfg.commandDelayMs, guard: 'strong' });
     bootstrapInstalled = true;
     if (cfg.bootstrapDelayMs > 0) await sleep(cfg.bootstrapDelayMs);
@@ -2092,7 +2088,7 @@ async function startRun() {
       return `${dir}\\${String(f.name || 'payload.bin')}`;
     };
 
-    setStatus('실행 중', `파일 ${files.length}개 처리`);
+    setStatus(t('status.running'), t('status.processingFiles', { count: files.length }));
     stageSendChunks();
 
     let processed = 0;
@@ -2107,7 +2103,7 @@ async function startRun() {
         if (!outPath) continue;
 
         processed += 1;
-        setStatus('실행 중', `${processed}/${files.length} ${f.name || f.webkitRelativePath || ''}`);
+        setStatus(t('status.running'), t('status.processingFile', { processed, total: files.length, name: f.name || f.webkitRelativePath || '' }));
 
         const buf = await f.arrayBuffer();
         const b64 = arrayBufferToBase64(buf);
@@ -2174,17 +2170,17 @@ async function startRun() {
       } catch {
         // ignore cleanup errors on cancel
       }
-      setStatus('중지됨', '사용자 중지');
+      setStatus(t('status.stopped'), t('status.userStopped'));
     } else {
       // Success: remove work artifacts under targetDir\.tmp
       await psLine(tx, 'bf_finalize', { commandDelayMs: cfg.commandDelayMs });
       if (job && Number(job.workTotalLines) > 0) {
         job.workDoneLines = job.workTotalLines;
       }
-      setStatus('완료', `완료: ${processed}/${files.length} 파일`);
+      setStatus(t('status.complete'), t('status.completeFiles', { processed, total: files.length }));
     }
   } catch (err) {
-    setStatus('오류', String(err?.message || err));
+    setStatus(t('status.error'), String(err?.message || err));
   } finally {
     setUiRunState({ isRunning: false, isPaused: false });
     finishJobMetrics();
@@ -2196,7 +2192,7 @@ function pauseRun() {
   if (!running) return;
   void (async () => {
     setUiRunState({ isRunning: true, isPaused: true });
-    setStatus('일시정지', renderStageText());
+    setStatus(t('status.paused'), renderStageText());
     try {
       const cfg = getFilesSettingsFromUi();
       const toggleKeyId = toggleKeyStringToId(getToggleKeySetting());
@@ -2218,7 +2214,7 @@ function resumeRun() {
   if (!running) return;
   void (async () => {
     setUiRunState({ isRunning: true, isPaused: false });
-    setStatus('실행 중', renderStageText());
+    setStatus(t('status.running'), renderStageText());
     try {
       const cfg = getFilesSettingsFromUi();
       const toggleKeyId = toggleKeyStringToId(getToggleKeySetting());
@@ -2256,7 +2252,7 @@ function stopRun() {
     }
   })();
   setUiRunState({ isRunning: false, isPaused: false });
-  setStatus('중지됨', '');
+  setStatus(t('status.stopped'), '');
   stageCleanup();
   finishJobMetrics();
   updateStartEnabled();
@@ -2268,7 +2264,7 @@ function wireEvents() {
       try {
         await connect();
       } catch (err) {
-        setStatus('오류', String(err?.message || err));
+        setStatus(t('status.error'), String(err?.message || err));
         setUiConnected(false);
         updateStartEnabled();
       }
@@ -2398,7 +2394,7 @@ function init() {
   applyFilesSettingsToUi(cfg);
   saveFilesSettings(cfg);
 
-  setStatus('연결 안 됨', '');
+  setStatus(t('status.disconnected'), '');
   setUiRunState({ isRunning: false, isPaused: false });
   clearJobMetrics();
 
@@ -2406,4 +2402,9 @@ function init() {
   updateStartEnabled();
 }
 
-init();
+async function boot() {
+  await initI18n();
+  init();
+}
+
+boot();

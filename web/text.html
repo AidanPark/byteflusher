@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ByteFlusher — Text Flush (BLE to USB HID automatic typing)</title>
     <meta
       name="description"
-      content="ByteFlusher Text Flush: Web Bluetooth(BLE)로 텍스트를 전송하면 nRF52840 보드가 USB HID 키보드 입력으로 Target PC에 정확하게 타이핑합니다. 정확성 우선(누락/중복 방지, Pause/Stop 즉시성)."
+      content="ByteFlusher Text Flush: Send text via Web Bluetooth (BLE) and the nRF52840 board types it accurately on the Target PC as USB HID keyboard input. Accuracy-first (no drops/duplicates, instant Pause/Stop)."
     />
 
     <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
@@ -15,12 +15,12 @@
     <link rel="canonical" href="https://aidanpark.github.io/byteflusher/web/text.html" />
 
     <meta property="og:type" content="website" />
-    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:site_name" content="ByteFlusher" />
     <meta property="og:title" content="ByteFlusher — Text Flush" />
     <meta
       property="og:description"
-      content="Web Bluetooth(BLE)로 텍스트 전송 → USB HID 키보드로 Target PC에 자동 타이핑(정확성 우선)."
+      content="Send text via Web Bluetooth (BLE) → USB HID keyboard auto-typing on Target PC (accuracy-first)."
     />
     <meta property="og:url" content="https://aidanpark.github.io/byteflusher/web/text.html" />
     <meta property="og:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
@@ -29,7 +29,7 @@
     <meta name="twitter:title" content="ByteFlusher — Text Flush" />
     <meta
       name="twitter:description"
-      content="BLE(Web Bluetooth) → nRF52840 → USB HID keyboard. 정확성 우선 텍스트 자동 입력."
+      content="BLE (Web Bluetooth) → nRF52840 → USB HID keyboard. Accuracy-first automatic text input."
     />
     <meta name="twitter:image" content="https://aidanpark.github.io/byteflusher/docs/ui_text_preview.png" />
 
@@ -52,176 +52,173 @@
         <aside class="sidebar">
           <section class="card">
             <div class="cardHeaderRow">
-              <h2 class="sidebarTitle" style="margin: 0;">장치</h2>
+              <h2 class="sidebarTitle" style="margin: 0;" data-i18n="common.device">Device</h2>
             </div>
             <fieldset id="deviceFieldset">
               <div class="row">
-                <button id="btnConnect" class="primary">장치 연결</button>
-                <button id="btnDisconnect" disabled>연결 해제</button>
-                <button id="btnBootloader" class="danger" disabled>부트로더 진입</button>
+                <button id="btnConnect" class="primary" data-i18n="common.connect">Connect Device</button>
+                <button id="btnDisconnect" disabled data-i18n="common.disconnect">Disconnect</button>
+                <button id="btnBootloader" class="danger" disabled data-i18n="common.bootloader">Enter Bootloader</button>
               </div>
 
               <div class="grid2" style="margin-top: 10px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  닉네임
-                  <input id="deviceNickname" class="textField" type="text" maxlength="12" placeholder="예: aidan" />
+                  <span data-i18n="common.nickname">Nickname</span>
+                  <input id="deviceNickname" class="textField" type="text" maxlength="12" placeholder="e.g. aidan" data-i18n-placeholder="common.nicknamePlaceholderText" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  보드에 저장되며, 광고 이름에 반영됩니다(영문/숫자/-/_).
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="common.nicknameHint">
+                  Saved to board; reflected in advertising name (alphanumeric/-/_).
                 </p>
               </div>
 
               <div class="row" style="margin-top: 8px;">
-                <button id="btnApplyNickname" type="button" disabled>닉네임 저장</button>
+                <button id="btnApplyNickname" type="button" disabled data-i18n="common.saveNickname">Save Nickname</button>
               </div>
             </fieldset>
             <div class="status">
-              <div><span class="label">상태</span> <span id="statusText">연결 안 됨</span></div>
+              <div><span class="label" data-i18n="common.status">Status</span> <span id="statusText" data-i18n="status.disconnected">Disconnected</span></div>
               <div class="muted small" id="detailsText"></div>
             </div>
           </section>
 
           <section class="card">
-            <h2 class="sidebarTitle">주의사항</h2>
+            <h2 class="sidebarTitle" data-i18n="common.cautions">Cautions</h2>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
-              <li>본인 소유/관리 시스템 또는 명시적으로 허가받은 환경에서의 테스트/개발 자동화/데모 목적 사용을 전제로 합니다.</li>
-              <li>무단 접근, 보안 우회, 비인가 입력 등 불법/비윤리적 목적으로 사용하지 마세요.</li>
-              <li>OS 사전 페어링 없이, 브라우저(Chrome/Edge)에서 <b>장치 연결</b>만으로 사용합니다.</li>
-              <li>시작 전 Target PC의 입력 위치(포커스)를 반드시 확인하세요.</li>
+              <li data-i18n="common.cautionAuth">Intended for testing/development automation/demo purposes on systems you own/manage or in explicitly authorized environments.</li>
+              <li data-i18n="common.cautionIllegal">Do not use for unauthorized access, security bypass, unauthorized input, or any illegal/unethical purpose.</li>
+              <li data-i18n-html="common.cautionNoPairing">No OS pre-pairing needed; just use <b>Connect Device</b> from the browser (Chrome/Edge).</li>
+              <li data-i18n="common.cautionFocus">Verify cursor/focus position on the Target PC before starting.</li>
             </ul>
           </section>
 
           <details class="card cardCollapsible" id="settingsCardText">
             <summary class="cardSummary">
-              <span class="cardSummaryTitle">전송설정</span>
+              <span class="cardSummaryTitle" data-i18n="common.transferSettings">Transfer Settings</span>
             </summary>
             <fieldset id="settingsFieldset">
               <div class="grid2">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  청크 크기 (바이트)
+                  <span data-i18n="settings.chunkSize">Chunk size (bytes)</span>
                   <input id="chunkSize" type="number" min="1" max="200" value="20" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  한 번에 BLE로 보내는 데이터 크기입니다. 너무 크면 실패율이 올라갈 수 있습니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="settings.chunkSizeHint">
+                  Data size sent via BLE at once. Too large may increase failure rate.
                 </p>
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  청크 전송 간격 (ms)
+                  <span data-i18n="settings.chunkDelay">Chunk send interval (ms)</span>
                   <input id="chunkDelay" type="number" min="0" max="200" value="30" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  청크를 보낸 뒤 다음 청크를 보내기 전 대기 시간입니다(전송 안정화용).
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="settings.chunkDelayHint">
+                  Wait time between chunks (for transfer stabilization).
                 </p>
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  재시도 간격 (ms)
+                  <span data-i18n="settings.retryDelay">Retry interval (ms)</span>
                   <input id="retryDelay" type="number" min="0" max="5000" value="300" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  연결이 끊기거나 전송 실패 시, 재연결/재전송을 시도하기 전 대기 시간입니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="settings.retryDelayHint">
+                  Wait time before reconnect/retry on disconnect or failure.
                 </p>
               </div>
 
               <hr class="sidebarDivider" />
 
-              <h2 class="settingsTitle" style="margin-top: 14px;">입력설정</h2>
+              <h2 class="settingsTitle" style="margin-top: 14px;" data-i18n="settings.inputSettings">Input Settings</h2>
 
               <div class="grid2" style="margin-top: 12px;">
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  한/영 전환키
+                  <span data-i18n="settings.toggleKey">KR/EN toggle key</span>
                   <select id="toggleKey">
-                    <option value="rightAlt">오른쪽 Alt (Windows)</option>
-                    <option value="capsLock">Caps Lock (mac)</option>
-                    <option value="leftAlt">왼쪽 Alt</option>
-                    <option value="rightCtrl">오른쪽 Ctrl</option>
-                    <option value="leftCtrl">왼쪽 Ctrl</option>
-                    <option value="rightGui">오른쪽 GUI (Win/Cmd)</option>
-                    <option value="leftGui">왼쪽 GUI (Win/Cmd)</option>
+                    <option value="rightAlt" data-i18n="settings.toggleKeyRightAlt">Right Alt (Windows)</option>
+                    <option value="capsLock" data-i18n="settings.toggleKeyCapsLock">Caps Lock (mac)</option>
+                    <option value="leftAlt" data-i18n="settings.toggleKeyLeftAlt">Left Alt</option>
+                    <option value="rightCtrl" data-i18n="settings.toggleKeyRightCtrl">Right Ctrl</option>
+                    <option value="leftCtrl" data-i18n="settings.toggleKeyLeftCtrl">Left Ctrl</option>
+                    <option value="rightGui" data-i18n="settings.toggleKeyRightGui">Right GUI (Win/Cmd)</option>
+                    <option value="leftGui" data-i18n="settings.toggleKeyLeftGui">Left GUI (Win/Cmd)</option>
                   </select>
                 </label>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  대체 문자열
+                  <span data-i18n="settings.unsupportedReplacement">Replacement string</span>
                   <input id="unsupportedReplacement" type="text" value="[?]" maxlength="16" />
                 </label>
-                <p class="muted small" style="margin: 9px 0 0;">
-                  키보드에 없는 문자는 이 문자열로 치환되어 입력됩니다.
+                <p class="muted small" style="margin: 9px 0 0;" data-i18n="settings.unsupportedReplacementHint">
+                  Characters not on the keyboard will be replaced with this string.
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  라인 시작 공백/탭 무시
+                  <span data-i18n="settings.ignoreLeadingWhitespace">Ignore leading spaces/tabs</span>
                   <input id="ignoreLeadingWhitespace" type="checkbox" />
                 </label>
-                <p class="muted small" style="margin: 9px 0 0;">
-                  각 줄 맨 앞의 공백/탭은 전송하지 않습니다(IDE에 입력 후 포매팅으로 정렬할 때 유용).
+                <p class="muted small" style="margin: 9px 0 0;" data-i18n="settings.ignoreLeadingWhitespaceHint">
+                  Leading spaces/tabs on each line will not be sent (useful for IDE auto-formatting).
                 </p>
 
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  키 입력 후 대기 (ms)
+                  <span data-i18n="settings.typingDelay">Key typing delay (ms)</span>
                   <input id="typingDelayMs" type="number" min="0" max="1000" value="30" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  각 키 입력(문자 1개) 후 대기 시간입니다. 너무 짧으면 키 입력이 누락되거나(특히 HID/IME) 글자가 깨질 수 있습니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="settings.typingDelayHint">
+                  Wait time after each keystroke. Too short may cause missed/garbled characters (especially HID/IME).
                 </p>
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  한/영 전환 후 대기 (ms)
+                  <span data-i18n="settings.modeSwitchDelay">KR/EN switch delay (ms)</span>
                   <input id="modeSwitchDelayMs" type="number" min="0" max="3000" value="100" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  한/영 전환(IME 토글) 직후 안정화 대기입니다. 전환이 완료되기 전에 다음 키를 보내면 원래 모드로 입력될 수 있습니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="settings.modeSwitchDelayHint">
+                  Stabilization wait after IME toggle. Too short may cause input in the wrong mode.
                 </p>
                 <label class="inline" style="width: 100%; justify-content: space-between;">
-                  키 눌림 유지 (ms)
+                  <span data-i18n="settings.keyPressDelay">Key press hold (ms)</span>
                   <input id="keyPressDelayMs" type="number" min="0" max="300" value="10" />
                 </label>
-                <p class="muted small" style="margin: -2px 0 0;">
-                  키를 "누르고 있는 시간"입니다. 너무 짧으면 일부 환경에서 눌림이 인식되지 않을 수 있습니다.
+                <p class="muted small" style="margin: -2px 0 0;" data-i18n="settings.keyPressDelayHint">
+                  How long a key is held down. Too short may not register in some environments.
                 </p>
               </div>
-              <p class="muted small" style="margin: 9px 0 0;">
-                위 값들은 보드(USB HID)의 실제 타이핑 속도/안정성에 영향을 줍니다.
+              <p class="muted small" style="margin: 9px 0 0;" data-i18n="settings.timingNote">
+                These values affect the actual typing speed/stability on the board (USB HID).
               </p>
 
               <div class="row" style="margin-top: 12px;">
-                <button id="btnApplyDeviceSettings" class="primary" disabled>설정 적용</button>
-                <button id="btnResetSettings">설정 초기화</button>
+                <button id="btnApplyDeviceSettings" class="primary" disabled data-i18n="common.applySettings">Apply Settings</button>
+                <button id="btnResetSettings" data-i18n="common.resetSettings">Reset Settings</button>
                 <span id="textSettingsToast" class="muted small settingsToast" aria-live="polite"></span>
               </div>
             </fieldset>
           </details>
 
           <section class="card">
-            <h2 class="sidebarTitle">참고</h2>
+            <h2 class="sidebarTitle" data-i18n="common.notes">Notes</h2>
             <div class="muted small" style="margin: 0 0 10px 0;">
-              <div style="font-weight: 600; margin-bottom: 4px;">전체 실행 절차(요약)</div>
-              <div>
-                텍스트 전처리(치환/공백옵션) → BLE 패킷 분할(청크) → 전송 시작(Start)
-                → (선택) 장치 타이밍 설정 적용 → 청크 전송 반복(writeValue)
-                → 장치(USB HID)가 실제로 타이핑 → 전송 완료(Stop/완료)
+              <div style="font-weight: 600; margin-bottom: 4px;" data-i18n="text.procedureSummaryTitle">Execution procedure (summary)</div>
+              <div data-i18n="text.procedureSummary">
+                Text preprocessing (replacement/whitespace options) → BLE packet splitting (chunks) → Start → (optional) device timing settings → chunk transmission loop (writeValue) → device (USB HID) types → complete (Stop/done)
               </div>
-              <div style="margin-top: 6px;">
-                화면의 지표 의미: 예상/기준은 입력/설정으로 계산된 값(프리뷰 가능), 완료율은 전송된 bytes 비율 기반 근사,
-                시작/경과/종료는 wall-clock 기준 표시
+              <div style="margin-top: 6px;" data-i18n="text.metricsNote">
+                Metric meanings: ETA/Basis are values calculated from input/settings (previewable), Progress is an approximation based on sent bytes ratio, Start/Elapsed/End are wall-clock based.
               </div>
             </div>
             <ul class="muted small" style="margin: 0; padding-left: 18px;">
-              <li>Web Bluetooth는 Chrome/Edge에서만 동작합니다.</li>
-              <li>Target PC는 USB 키보드 장치를 허용해야 합니다.</li>
-              <li>시작(Flush) 전에 Target PC에서 입력될 위치에 커서를 미리 놓아주세요.</li>
-              <li>시작 전에 Target PC 입력기를 <b>영문 상태</b>로 맞춰주세요(한/영 자동 동기화는 보장할 수 없습니다).</li>
-              <li>BLE 전송은 길이 제한이 있어 기본적으로 분할 전송합니다.</li>
+              <li data-i18n="text.noteBluetooth">Web Bluetooth only works in Chrome/Edge.</li>
+              <li data-i18n="text.noteUSB">Target PC must allow USB keyboard devices.</li>
+              <li data-i18n="text.noteFocusStart">Place the cursor at the target input position on the Target PC before starting (Flush).</li>
+              <li data-i18n-html="text.cautionEnglishMode">Set Target PC input method to <b>English mode</b> before starting (automatic KR/EN sync is not guaranteed).</li>
+              <li data-i18n="text.noteBLESplit">BLE transfers have length limits and are split by default.</li>
             </ul>
           </section>
         </aside>
 
         <section class="main">
           <section class="card">
-            <label for="textInput" class="label">Flush Text</label>
-            <textarea id="textInput" rows="28" placeholder="여기에 입력한 텍스트가 Target PC로 타이핑됩니다."></textarea>
+            <label for="textInput" class="label" data-i18n="text.flushLabel">Flush Text</label>
+            <textarea id="textInput" rows="28" placeholder="Text entered here will be typed on the Target PC." data-i18n-placeholder="text.textareaPlaceholder"></textarea>
 
             <div class="row" style="margin-top: 24px;">
-              <button id="btnStart" class="primary controlButton" disabled>Start (Text)</button>
-              <button id="btnPause" class="controlButton" disabled>Pause</button>
-              <button id="btnResume" class="controlButton" disabled>Resume</button>
-              <button id="btnStop" class="danger controlButton" disabled>Stop</button>
+              <button id="btnStart" class="primary controlButton" disabled data-i18n="common.startText">Start (Text)</button>
+              <button id="btnPause" class="controlButton" disabled data-i18n="common.pause">Pause</button>
+              <button id="btnResume" class="controlButton" disabled data-i18n="common.resume">Resume</button>
+              <button id="btnStop" class="danger controlButton" disabled data-i18n="common.stop">Stop</button>
             </div>
 
             <div class="muted small" id="startHintText" style="margin-top: 8px;"></div>
@@ -229,35 +226,35 @@
 
             <div id="jobMetrics" class="jobMetrics" aria-live="polite" style="margin-top: 10px;">
               <div class="jobLine">
-                <span class="jobKey">예상</span>
+                <span class="jobKey" data-i18n="metric.estimate">ETA</span>
                 <span id="etaText" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">시작</span>
+                <span class="jobKey" data-i18n="metric.startTime">Start</span>
                 <span id="startTimeText" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">바이트</span>
+                <span class="jobKey" data-i18n="metric.bytes">Bytes</span>
                 <span id="totalBytesText" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">단계</span>
+                <span class="jobKey" data-i18n="metric.stage">Stage</span>
                 <span id="stageText" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">경과</span>
+                <span class="jobKey" data-i18n="metric.elapsed">Elapsed</span>
                 <span id="elapsedText" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">완료율</span>
+                <span class="jobKey" data-i18n="metric.progress">Progress</span>
                 <span id="progressText" class="muted small">-</span>
               </div>
               <div class="jobLine">
-                <span class="jobKey">종료</span>
+                <span class="jobKey" data-i18n="metric.endTime">End</span>
                 <span id="endTimeText" class="muted small">-</span>
               </div>
               <div class="jobLine jobLineWide">
-                <span class="jobKey">기준</span>
+                <span class="jobKey" data-i18n="metric.basis">Basis</span>
                 <span id="estimateBasisText" class="muted small">-</span>
               </div>
             </div>
